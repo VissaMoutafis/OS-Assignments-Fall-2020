@@ -65,7 +65,7 @@ static bool find_key(List *array, size_t size, Pointer key, size_t key_hash, Lis
     return false;
 }
 
-size_t calculate_ht_size(size_t entries) {
+static size_t calculate_ht_size(size_t entries) {
     // According to von Misse paradox (great theorem):
     // If 23 people are in a room then,
     // 2 of them has >50% chance of having the same birthday.
@@ -177,7 +177,7 @@ void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr) {
 }
 
 // helping function
-void ht_print_keys(HT hash_table, Visit visit_key) {
+static void ht_print_keys(HT hash_table, Visit visit_key) {
     for (size_t i = 0; i < hash_table->size; ++i) {
         // if the slot is not empty then visit the key and display it.
         // The diplay manner is determined by the caller
