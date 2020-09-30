@@ -1,7 +1,8 @@
-/*  Hash Table Implementation
+/*  
+**  Hash Table Implementation
 **  Using Open Addressing with Double Hashing
 */
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h> // for memcpy
@@ -16,7 +17,7 @@ struct hashtable {
     size_t size;                   // current size of the table
     size_t item_count;             // current count of the keys in the table
 };
-
+int cnt = 0;
 // define if a slot is empty or not (trivial)
 static bool is_empty_slot(List table_entry) {
     return table_entry == NULL;
@@ -27,23 +28,19 @@ static bool is_empty_slot(List table_entry) {
 //     // Create the new array
 //     size_t old_size = hash_table->size;
 //     size_t new_size = 2 * old_size;
-
 //     // set the array pointers
 //     Pointer *old_array = hash_table->array;
 //     Pointer *new_array = calloc(new_size, sizeof(Pointer)); //initialize every block with NULL
-
 //     // set the new table of the hash table
 //     hash_table->array = new_array;
 //     // Set the new size
 //     hash_table->size = new_size;
-
 //     // Copy the old to the new larger array
 //     for (size_t i = 0; i < old_size; ++i) {
 //         // for every element in the previous hash table, insert it to the new one
 //         if (!is_empty_slot(old_array[i]))
 //             ht_insert(hash_table, old_array[i]);
 //     }
-
 //     // free the memory of the old array
 //     free(old_array);
 // }
@@ -69,8 +66,12 @@ static bool find_key(List *array, size_t size, Pointer key, size_t key_hash, Lis
 }
 
 size_t calculate_ht_size(size_t entries) {
-    // we want a load factor of 0.1 tops -> 10/100 -> 1/10 = entries/size so size = entries * 10:
-    return entries*10;
+    // According to von Misse paradox (great theorem):
+    // If 23 people are in a room then,
+    // 2 of them has >50% chance of having the same birthday.
+    // If we apply that with interpreting same birthday as a collision
+    // then we get the following.
+    return entries*365/22 ;
 }
 
 // Hash Table Methods Implementation
@@ -81,7 +82,7 @@ HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor
     ht->hash = hash_func;
     ht->compare = compare;
     ht->itemDestructor = itemDestructor;
-    ht->size = calculate_ht_size(max_entries);
+    ht->size = max_entries > 0 ? calculate_ht_size(max_entries) : INITIAL_HT_SIZE;  //make sure that the size is a positive integer large enough
     ht->item_count = 0;
 
     // The table will be a 1-D array of Pointer* ( aka (void*)* )
@@ -115,7 +116,7 @@ void ht_insert(HT hash_table, Pointer key) {
         if (is_empty_slot(hash_table->array[key_hash]))
             // if the slot is empty (there is no list there) then add a list and ... 
             hash_table->array[key_hash] = list_create(hash_table->compare, hash_table->itemDestructor);
-
+        else cnt++;
         // add the key to the list
         list_insert(hash_table->array[key_hash], key, true); // add the entry at the end of the list
         // increase the item count
@@ -189,6 +190,7 @@ void ht_print_keys(HT hash_table, Visit visit_key) {
 // Simple function to free the memory
 void ht_destroy(HT hash_table)
 {
+    printf("collisions / item_count = %.1f", (float)cnt);
     for (size_t i = 0; i < hash_table->size; ++i) {
         // if the list-slot is not empty then free the memory
         if (!is_empty_slot(hash_table->array[i]))

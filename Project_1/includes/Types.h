@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#define CUR_YEAR 2020
+
 typedef void *Pointer; //We will use the Pointer notation for Item and/or Key type
 
 typedef int (*Compare)(Pointer item1, Pointer item2); //Function to compare 2 items given by the user
@@ -12,3 +14,17 @@ typedef void (*ItemDestructor)(Pointer item); //Function to delete the items sin
 typedef void (*Visit)(Pointer item); //Function to help the user define the way the items are printed
 
 typedef size_t (*Hash_Func)(Pointer entry); //Function to hash the entry to a specific integer
+
+
+// The Student struct
+
+typedef struct std {
+    char *student_id;
+    char *first_name;
+    char *last_name;
+    char *postal;
+    char *city;
+    size_t year_of_registration;
+    float avg;
+
+} *Student;

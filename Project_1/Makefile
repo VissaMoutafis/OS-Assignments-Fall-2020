@@ -6,7 +6,7 @@ INCLUDE = ./includes
 
 MODULES = ./modules
 
-CFLAGS += -I$(INCLUDE) -Wall -g3
+CFLAGS += -I$(INCLUDE) -Wall -g3 -Ofast
 
 OBJS = testHashtable.o
 

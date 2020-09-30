@@ -15,6 +15,9 @@ List list_create(Compare compare, ItemDestructor itemDestructor);
 // Checks if the list is empty
 bool list_empty(List list);
 
+// Returns the length of the list
+size_t list_len(List list);
+
 // Get the first entry of the list
 ListNode list_get_head(List list);
 

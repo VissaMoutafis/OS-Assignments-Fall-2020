@@ -58,6 +58,11 @@ ListNode list_get_head(List list) {
     return list->head;
 }
 
+size_t list_len(List list) {
+    assert(list);
+    return list->count;
+}
+
 // Finds the node and returns it, otherwise returns NULL.
 ListNode list_find(List list, Pointer entry) {
     assert(list);
@@ -112,7 +117,7 @@ void list_insert(List list, Pointer entry, bool last) {
             list->head = new_node; 
         }
     }
-    list->count += 1;
+    list->count ++;
     
 }
 
@@ -146,7 +151,7 @@ bool list_delete(List list, Pointer entry,  bool delete_entry, Pointer *old_entr
         }
         free(node);
 
-        list->count -= 1;
+        list->count --;
         assert(list->count >= 0); // debug line
         return true;
     }
@@ -177,7 +182,7 @@ void list_destroy(List *list) {
         next = cur->next;
 
         // free the memory
-        if ((*list)->itemDestructor){
+        if ((*list)->itemDestructor) {
             (*list)->itemDestructor(cur->entry);
             }
         free(cur);
