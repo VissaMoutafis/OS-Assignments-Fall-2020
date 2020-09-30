@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Types.h"
-
+#include "List.h"
 #define INITIAL_HT_SIZE 100 // initial (prime int) size of the hash table
 
 typedef struct hashtable* HT;
@@ -10,7 +10,7 @@ typedef struct hashtable* HT;
 
 // Creates a Hash Table
 // compare must return 0 if the 2 keys are the same and anything else otherwise
-HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor);
+HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor, size_t max_entries);
 
 //Adds a key to the hash table 
 void ht_insert(HT hash_table, Pointer key);

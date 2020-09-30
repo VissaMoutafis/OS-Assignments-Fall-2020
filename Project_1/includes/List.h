@@ -25,10 +25,8 @@ ListNode list_find(List list, Pointer entry);
 // If the last is false it is inserted at the beginning, else it is inserted at the end.
 void list_insert(List list, Pointer entry, bool last);
 
-// Deletes the nodes and if the flag is TRUE then it destroys the entry, otherwise the entry is returned to the old_entry pointer.
-// Returns true if the deletion was successful, otherwise return false.
-// If last is false it deletes the first entry, else it deletes the last entry
-bool list_delete(List list, Pointer entry, bool last, bool delete_entry, Pointer *old_entry);
+// Delete a specific entry
+bool list_delete(List list, Pointer entry, bool delete_entry, Pointer *old_entry);
 
 // Sets a new itemDestructor for the list.
 void list_set_destructor(List list, ItemDestructor itemDestructor);
