@@ -72,8 +72,9 @@ ListNode list_find(List list, Pointer entry) {
         // compare the entry with the current entry and
         // if its the entry we are looking for then return 
         // the node that 'cur' points to 
-        if (compare(cur_entry, entry) == 0)
+        if (list->compare(cur_entry, entry) == 0)
             return cur;
+        cur = cur->next;
     }
 
     // if we reached this far then the search was unsuccessful
