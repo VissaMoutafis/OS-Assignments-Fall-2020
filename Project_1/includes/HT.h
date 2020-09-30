@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
 #include "Types.h"
 
 #define INITIAL_HT_SIZE 100 // initial (prime int) size of the hash table

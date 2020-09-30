@@ -8,8 +8,7 @@
 #include <assert.h>
 #include "HT.h"
 
-struct hashtable
-{
+struct hashtable {
     Pointer *array;                // the array that holds the keys
     Compare compare;               // compare function for the searching
     Hash_Func hash;                // the hash function
@@ -19,8 +18,7 @@ struct hashtable
 };
 
 // Utilities
-static size_t probing_hash(size_t key_hash, size_t table_size)
-{
+static size_t probing_hash(size_t key_hash, size_t table_size) {
     // The main idea is that we have a table with table_size being a power of 2
     // so the probing hash should return a value
     // between 1 and table_size that is an odd number
@@ -33,14 +31,12 @@ static size_t probing_hash(size_t key_hash, size_t table_size)
 }
 
 // define if a slot is empty or not (trivial)
-static bool is_empty_slot(Pointer table_entry)
-{
+static bool is_empty_slot(Pointer table_entry) {
     return table_entry == NULL;
 }
 
 // Hash table rehashing function
-static void rehash(HT hash_table)
-{
+static void rehash(HT hash_table) {
     // Create the new array
     size_t old_size = hash_table->size;
     size_t new_size = 2 * old_size;
@@ -55,8 +51,7 @@ static void rehash(HT hash_table)
     hash_table->size = new_size;
 
     // Copy the old to the new larger array
-    for (size_t i = 0; i < old_size; ++i)
-    {
+    for (size_t i = 0; i < old_size; ++i) {
         // for every element in the previous hash table, insert it to the new one
         if (!is_empty_slot(old_array[i]))
             ht_insert(hash_table, old_array[i]);
@@ -66,8 +61,7 @@ static void rehash(HT hash_table)
     free(old_array);
 }
 
-static bool find_key(Pointer *array, size_t size, Compare compare, Pointer key, size_t key_hash, size_t probe_step, size_t *pos)
-{
+static bool find_key(Pointer *array, size_t size, Compare compare, Pointer key, size_t key_hash, size_t probe_step, size_t *pos) {
     assert(array != NULL);
     assert(compare != NULL);
 
@@ -80,8 +74,7 @@ static bool find_key(Pointer *array, size_t size, Compare compare, Pointer key, 
 
     // If we actually found the key, then we must set the pos pointer to be current key hash
     // and return true
-    if (!is_empty_slot(array[key_hash]) && compare(key, array[key_hash]) == 0)
-    {
+    if (!is_empty_slot(array[key_hash]) && compare(key, array[key_hash]) == 0) {
         *pos = key_hash;
         return true;
     }
@@ -96,8 +89,7 @@ static bool find_key(Pointer *array, size_t size, Compare compare, Pointer key, 
 
 // Hash Table Methods Implementation
 
-HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor)
-{
+HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor) {
     HT ht = malloc(sizeof(*ht));
 
     ht->hash = hash_func;
@@ -112,8 +104,7 @@ HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor
     return ht;
 }
 
-void ht_insert(HT hash_table, Pointer key)
-{
+void ht_insert(HT hash_table, Pointer key) {
     // First hash the entry and find a suitable probe step
     size_t key_hash = hash_table->hash(key);
     size_t probe_step = probing_hash(key_hash, hash_table->size);
@@ -121,8 +112,7 @@ void ht_insert(HT hash_table, Pointer key)
 
     //Now we must add the key
     // If the key is already in the table then we change the entry
-    if (find_key(hash_table->array, hash_table->size, hash_table->compare, key, key_hash, probe_step, &position))
-    {
+    if (find_key(hash_table->array, hash_table->size, hash_table->compare, key, key_hash, probe_step, &position)) {
         // position = 'the index of the 'key' that exist already in the table
         // so we delete the previous entry
         if (hash_table->itemDestructor)
@@ -130,9 +120,7 @@ void ht_insert(HT hash_table, Pointer key)
 
         // and we must add the new key in 'position'
         hash_table->array[position] = key;
-    }
-    else
-    {
+    } else {
         //case that the key is not already in the hash table
         // so we just add it and increase the item_count
         hash_table->array[position] = key;
@@ -154,8 +142,7 @@ bool ht_contains(HT hash_table, Pointer key, Pointer *key_ptr)
 
     // Now we must find the entry
     // we will use the find_key function
-    if (find_key(hash_table->array, hash_table->size, hash_table->compare, key, key_hash, probe_step, &position))
-    {
+    if (find_key(hash_table->array, hash_table->size, hash_table->compare, key, key_hash, probe_step, &position)) {
         // since we found the key  we must set the *key_ptr and return true
         *key_ptr = hash_table->array[position];
         return true;
@@ -166,40 +153,36 @@ bool ht_contains(HT hash_table, Pointer key, Pointer *key_ptr)
     return false;
 }
 
-void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr)
-{
+void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr) {
     // First hash the entry and find a suitable probe step
     size_t key_hash = hash_table->hash(key);
     size_t probe_step = probing_hash(key_hash, hash_table->size);
     size_t position;
 
-    if (find_key(hash_table->array, hash_table->size, hash_table->compare, key, key_hash, probe_step, &position))
-    {
+    if (find_key(hash_table->array, hash_table->size, hash_table->compare, key, key_hash, probe_step, &position)) {
         // we found the key
-        if (delete_key == true) // we wanna delete the key
-        {
+        if (delete_key == true) { 
+            // if we wanna delete the key
+
             // destroy the key
             if (hash_table->itemDestructor)
                 hash_table->itemDestructor(hash_table->array[position]);
 
             *key_ptr = NULL;
-        }
-        else // we don't want to delete the key
-        {
+        } else {
+            // we don't want to delete the key
             *key_ptr = hash_table->array[position];
         }
 
         // Make sure that we make the index null when we done
         hash_table->array[position] = NULL;
-    }
-    else // we did not find the key
+
+    } else // we did not find the key
         *key_ptr = NULL;
 }
 
-void ht_print_keys(HT hash_table, Visit visit_key)
-{
-    for (size_t i = 0; i < hash_table->size; ++i)
-    {
+void ht_print_keys(HT hash_table, Visit visit_key) {
+    for (size_t i = 0; i < hash_table->size; ++i) {
         // if the slot is not empty then visit the key and display it.
         // The diplay manner is determined by the caller
         if (!is_empty_slot(hash_table->array[i]))
@@ -211,8 +194,7 @@ void ht_print_keys(HT hash_table, Visit visit_key)
 // Simple function to free the memory
 void ht_destroy(HT hash_table)
 {
-    for (size_t i = 0; i < hash_table->size; ++i)
-    {
+    for (size_t i = 0; i < hash_table->size; ++i) {
         // if the slot is not empty then free the memory
         if (!is_empty_slot(hash_table->array[i]))
             if (hash_table->itemDestructor != NULL)

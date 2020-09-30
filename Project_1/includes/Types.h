@@ -1,7 +1,7 @@
 #pragma once
 #include <stdlib.h>
-
-typedef enum {black = 0, red = 1} Colour;
+#include <stdbool.h>
+#include <assert.h>
 
 typedef void *Pointer; //We will use the Pointer notation for Item and/or Key type
 
