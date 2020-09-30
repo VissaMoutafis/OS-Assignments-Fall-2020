@@ -13,7 +13,7 @@ struct inverted_index {
 
 typedef struct index_struct {
     size_t year;            // year of studies
-    List students;          // students at the same study year 
+    AVL students;           // students at the same study year 
 } *Index;
 
 // Utilities
@@ -66,12 +66,12 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        List std_list = entry->students;
+        AVL std_tree = entry->students;
 
         // Now we make sure that this student does not exist in the list
-        if (!list_find(std_list, student))
+        if (!avl_find(std_tree, student))
             // if not then add the student
-            list_insert(std_list, student, true);
+            avl_insert(std_tree, student);
 
     } else {
         // case that the list does not exist
@@ -80,7 +80,7 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         Index new_index = create_index(dummy->year, invidx->index_compare, invidx->index_compare); 
         
         // add the student to the index list
-        list_insert(new_index->students, student, true);
+        avl_insert(new_index->students, student);
         
         // add the new index to the inverted index struct
         list_insert(invidx->indexes, new_index, true);
@@ -107,29 +107,11 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        List std_list = entry->students;
+        AVL std_tree = entry->students;
 
         // If the node exists in the index list delete it
-        if (list_find(std_list, student)) 
-            list_delete(std_list, student, true, old_entry);
+        if (avl_find(std_tree, student)) 
+            avl_delete(std_tree, student, true, old_entry);
     }
 }
 
-// Get student list of a specific year
-List invidx_get_students_at_year(InvertedIndex invidx, size_t year) {
-    // dummy entry for search
-    Index dummy = malloc(sizeof(*dummy));
-    dummy->year = year;
-
-    // we get the list node that contains the Index as entry 
-    ListNode cur = list_find(invidx->indexes, dummy);
-
-    // make clean that the entry is an Index
-    Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-    
-    // delete the dummy entry
-    free(dummy);
-
-    // return the student list
-    return entry->students;
-}
