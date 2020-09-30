@@ -113,6 +113,7 @@ void list_insert(List list, Pointer entry, bool last) {
         }
     }
     list->count += 1;
+    
 }
 
 // Delete a specific entry 
@@ -142,9 +143,8 @@ bool list_delete(List list, Pointer entry,  bool delete_entry, Pointer *old_entr
         if (delete_entry) {
             if (list->itemDestructor)
                 list->itemDestructor(node->entry);
-
-            free(node);
         }
+        free(node);
 
         list->count -= 1;
         assert(list->count >= 0); // debug line
@@ -177,8 +177,9 @@ void list_destroy(List *list) {
         next = cur->next;
 
         // free the memory
-        if ((*list)->itemDestructor)
+        if ((*list)->itemDestructor){
             (*list)->itemDestructor(cur->entry);
+            }
         free(cur);
 
         // get to the next node
