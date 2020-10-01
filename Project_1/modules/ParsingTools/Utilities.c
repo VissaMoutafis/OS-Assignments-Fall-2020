@@ -1,6 +1,6 @@
 #include "ParsingUtils.h"
 
-char **parse_voter_data(char *data_str, int *columns) {
+char **parse_std_data(char *data_str, int *columns) {
     // Initialize the columns counter
     *columns = 0;
     
@@ -82,16 +82,18 @@ size_t fget_lines(char *filename) {
     return count;
 }
 
-int main(void) {
-    size_t lines = fget_lines("./input.txt");
-    FILE *fin = fopen("./input.txt", "r");
-    for (int i = 0; i < (int)lines; i++){
-        char* data_str = make_str(&fin);
-        printf("%s\n", data_str);
-        int data_cols;
-        char ** data_table = parse_voter_data(data_str, &data_cols);
-        for (int j = 0; j < data_cols; j++) 
-            printf("Data col #%d : %s\n", j+1, data_table[j]);
-        printf("\n------------------------------\n");
-    }
-}
+
+// test main
+// int main(void) {
+//     size_t lines = fget_lines("./input.txt");
+//     FILE *fin = fopen("./input.txt", "r");
+//     for (int i = 0; i < (int)lines; i++){
+//         char* data_str = make_str(&fin);
+//         printf("%s\n", data_str);
+//         int data_cols;
+//         char ** data_table = parse_voter_data(data_str, &data_cols);
+//         for (int j = 0; j < data_cols; j++) 
+//             printf("Data col #%d : %s\n", j+1, data_table[j]);
+//         printf("\n------------------------------\n");
+//     }
+// }

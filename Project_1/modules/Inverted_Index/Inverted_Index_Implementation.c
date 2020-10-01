@@ -6,46 +6,45 @@
 
 struct inverted_index {
     List *indexes;
-    Compare index_compare;
-    ItemDestructor index_itemDestructor;
+    Compare compare;
+    ItemDestructor itemDestructor;
     size_t item_count;
 };
 
-typedef struct index_struct {
+struct index_struct {
     int year;            // year of studies
     List students;           // students at the same study year 
-} *Index;
+};
 
 // Utilities
 
-Index create_index(int year, Compare index_compare, ItemDestructor index_destructor) {
+Index create_index(int year, Compare compare, ItemDestructor destructor) {
     Index idx = malloc(sizeof(*idx));
 
     idx->year = year;
-    idx->students = list_create(index_compare, index_destructor);
+    idx->students = list_create(compare, destructor);
 
     return idx;
 }
-//////////////////////////////////////////////////
 compare_index(Pointer y1, Pointer y2) {
     return ((Index)y1)->year - ((Index)y2)->year;
 }
+
 void delete_index(Pointer i) {
     Index x = (Index)i;
     list_destroy(&(x->students));
     free(i);
 }
-// ////////////////////////////////////////////////////////
 // Inverted Index D.S. Methods
 
 // Constructor Function
-InvertedIndex invidx_create(Compare index_compare, ItemDestructor index_itemDestructor, Compare compare, ItemDestructor itemDestructor) {
+InvertedIndex invidx_create( Compare compare, ItemDestructor itemDestructor) {
     InvertedIndex invidx = malloc(sizeof(*invidx));
 
     // Initialization
-    invidx->index_compare = index_compare;
-    invidx->index_itemDestructor = index_itemDestructor;
-    invidx->indexes = list_create(compare, itemDestructor);
+    invidx->compare = compare;
+    invidx->itemDestructor = itemDestructor;
+    invidx->indexes = list_create(compare_index, delete_index);
     invidx->item_count = 0;
     
 
@@ -76,8 +75,8 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
     } else {
         // case that the list does not exist
 
-        // create new index
-        Index new_index = create_index(dummy->year, invidx->index_compare, invidx->index_compare); 
+        // create new index with a list 
+        Index new_index = create_index(dummy->year, invidx->compare, invidx->compare); 
         
         // add the student to the index list
         list_insert(new_index->students, student, true);

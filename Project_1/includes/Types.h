@@ -23,8 +23,7 @@ typedef struct std {
     char *first_name;
     char *last_name;
     char *postal;
-    char *city;
     size_t year_of_registration;
-    float avg;
+    float gpa;
 
 } *Student;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Types.h"
+#include "ParsingUtils.h"
 #include <stdio.h>
 #include <string.h>
 

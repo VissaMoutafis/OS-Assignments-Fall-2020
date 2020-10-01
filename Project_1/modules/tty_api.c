@@ -1,36 +1,5 @@
 #include "TTY.h"
 
-char *make_str(FILE **_stream_) {
-    /*
-    ** A utility to transform a stream input to a string.
-    ** there is no need to enter a string length
-    ** WARNING: It returns the whole line and only the line. Parse it carefully.
-    */
-   
-    // First we will get the line
-    unsigned int len = 1;
-    char *str = calloc(1, sizeof(char));
-    unsigned int c;
-
-    while ((c = fgetc(*_stream_)) != EOF && c != '\n') {
-        len++;
-        char *new_str = calloc(len, sizeof(char));
-        strcpy(new_str, str);
-        new_str[len - 2] = c;
-        free(str);
-        str = new_str;
-    }
-
-    if (strlen(str) == 0 && c == EOF) { 
-        // if we are at the end of the file and 
-        // the str is empty just free the 1 byte and return EOF
-        free(str);
-        return NULL;
-    }
-
-    return str; // return the str
-}
-
 void print_tty(void) {
     // NOTE: Maybe later add some color
     printf("<mngstd> ~$ ");
@@ -62,7 +31,7 @@ bool check_format(char* cmd) {
     return false;
 }
 
-int main() {
-    printf("%s\n",check_format(get_input()) ? "Right" : "Wrong Format");
-    return 0;
-}
+// int main() {
+//     printf("%s\n",check_format(get_input()) ? "Right" : "Wrong Format");
+//     return 0;
+// }
