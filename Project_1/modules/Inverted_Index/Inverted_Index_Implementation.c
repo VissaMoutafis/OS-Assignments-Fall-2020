@@ -12,13 +12,13 @@ struct inverted_index {
 };
 
 typedef struct index_struct {
-    size_t year;            // year of studies
-    AVL students;           // students at the same study year 
+    int year;            // year of studies
+    List students;           // students at the same study year 
 } *Index;
 
 // Utilities
 
-Index create_index(size_t year, Compare index_compare, ItemDestructor index_destructor) {
+Index create_index(int year, Compare index_compare, ItemDestructor index_destructor) {
     Index idx = malloc(sizeof(*idx));
 
     idx->year = year;
@@ -66,12 +66,12 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        AVL std_tree = entry->students;
+        List std_list = entry->students;
 
         // Now we make sure that this student does not exist in the list
-        if (!avl_find(std_tree, student))
+        if (!list_find(std_list, student))
             // if not then add the student
-            avl_insert(std_tree, student);
+            list_insert(std_list, student, true);
 
     } else {
         // case that the list does not exist
@@ -80,7 +80,7 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         Index new_index = create_index(dummy->year, invidx->index_compare, invidx->index_compare); 
         
         // add the student to the index list
-        avl_insert(new_index->students, student);
+        list_insert(new_index->students, student, true);
         
         // add the new index to the inverted index struct
         list_insert(invidx->indexes, new_index, true);
@@ -107,11 +107,29 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        AVL std_tree = entry->students;
+        List std_list = entry->students;
 
         // If the node exists in the index list delete it
-        if (avl_find(std_tree, student)) 
-            avl_delete(std_tree, student, true, old_entry);
+        if (list_find(std_list, student)) 
+            list_delete(std_list, student, true, old_entry);
     }
 }
 
+void invidx_students_at(InvertedIndex invidx, int year) {
+    // dummy entry for search
+    Index dummy = malloc(sizeof(*dummy));
+    dummy->year = year;
+
+    // we get the list node that contains the Index as entry
+    ListNode cur = list_find(invidx->indexes, dummy);
+    
+    if (cur) {
+        // if such list exist
+        // make clean that the entry is an Index
+        Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
+        return entry->students;
+    }
+    
+    // if we reached here then there is no node that contains an index for the given year
+    return NULL;
+}

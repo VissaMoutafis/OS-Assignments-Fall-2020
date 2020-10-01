@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Types.h"
-#include "AVL.h"
 #include "List.h"
 typedef struct inverted_index* InvertedIndex;
 
@@ -18,5 +17,7 @@ void invidx_insert(InvertedIndex invidx, Pointer student);
 // otherwise we will keep the record at the old_entry pointer
 void invidx_delete(InvertedIndex invidx, Pointer Student, bool delete_entry, Pointer *old_entry);
 
+// Get the List of student at year
+void invidx_students_at(InvertedIndex invidx, int year);
 
 void invidx_destroy(InvertedIndex invidx);
