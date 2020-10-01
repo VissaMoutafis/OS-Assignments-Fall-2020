@@ -33,7 +33,7 @@ compare_index(Pointer y1, Pointer y2) {
 void delete_index(Pointer i) {
     Index x = (Index)i;
     list_destroy(&(x->students));
-    free(x);
+    free(i);
 }
 // ////////////////////////////////////////////////////////
 // Inverted Index D.S. Methods
@@ -132,4 +132,13 @@ void invidx_students_at(InvertedIndex invidx, int year) {
     
     // if we reached here then there is no node that contains an index for the given year
     return NULL;
+}
+
+void invidx_destroy(InvertedIndex invidx) {
+    // we must destroy the list. The others are destroyed automatically due to the use
+    // of item destructors
+    list_destroy(&(invidx->indexes));
+
+    // now free the whole struct
+    free(invidx);
 }

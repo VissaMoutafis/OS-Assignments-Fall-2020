@@ -2,28 +2,6 @@
 #include <string.h>
 #include <stdio.h>
 
-// all the possible commands for the tty API of the app
-char *possible_commands[10] = {
-    "i(nsert) [studentid, lastname, firstname, zip, year, gpa]",
-    "l(ook-up) [studentid]",
-    "d(elete) [studentid]",
-    "n(umber) [year]",
-    "t(op) num [year]",
-    "a(verage) [year]",
-    "m(inimum) [year]",
-    "c(ount)",
-    "p(ostal code) [rank]",
-    "exit"
-    };
-int pos_cmds_len = 10;
-
-void help() {
-    printf("Usage for the tty API:\n");
-    for (int i = 0; i < pos_cmds_len; i++) {
-        printf("\t%s\n", possible_commands[i]);
-    }    
-}
-
 void error_handle(char **a) {
     // wrong input
     // first free the memory
@@ -93,14 +71,14 @@ bool args_parser(int argc, char **argv, char ***input, int *input_size) {
     return false;
 }
 
-
-int main(int argc, char **argv) {
-    int input_size;
-    char** input;
-    bool s = args_parser(argc, argv, &input, &input_size);
-    if (input_size == 0) printf("No Args\n");
-    for (int i=0; s && i<input_size; ++i) {
-        printf("Argument #%d : %s\n", i, input[i]);
-    }
-    return 0;
-}
+// test main
+// int main(int argc, char **argv) {
+//     int input_size;
+//     char** input;
+//     bool s = args_parser(argc, argv, &input, &input_size);
+//     if (input_size == 0) printf("No Args\n");
+//     for (int i=0; s && i<input_size; ++i) {
+//         printf("Argument #%d : %s\n", i, input[i]);
+//     }
+//     return 0;
+// }
