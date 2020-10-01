@@ -114,7 +114,7 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
     }
 }
 
-void invidx_students_at(InvertedIndex invidx, int year) {
+List invidx_students_at(InvertedIndex invidx, int year) {
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
     dummy->year = year;

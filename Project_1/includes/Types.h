@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
+
 #define CUR_YEAR 2020
 
 typedef void *Pointer; //We will use the Pointer notation for Item and/or Key type
@@ -23,7 +24,7 @@ typedef struct std {
     char *first_name;
     char *last_name;
     char *postal;
-    size_t year_of_registration;
+    int year_of_registration;
     float gpa;
 
 } *Student;

@@ -1,11 +1,10 @@
 #include "ParsingUtils.h"
 
-char **parse_std_data(char *data_str, int *columns) {
+char **parse_line(char *data_str, int *columns, char* sep) {
     // Initialize the columns counter
     *columns = 0;
     
     char **data = NULL;
-    char *sep = ","; //determine the separator for the strtok function
 
     // split the str to all space-separated substring
     char *tok = strtok(data_str, sep);
@@ -82,6 +81,13 @@ size_t fget_lines(char *filename) {
     return count;
 }
 
+bool is_numeric(char* str) {
+    for (int i = 0; str[i]; i++)
+        if (!isnum(str[i]))
+            return false;
+    
+    return true;
+}
 
 // test main
 // int main(void) {

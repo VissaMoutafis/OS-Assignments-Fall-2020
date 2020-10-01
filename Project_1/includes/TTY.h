@@ -41,4 +41,5 @@ char *possible_commands[10] = {
 // Methods to print messages
 void help(void);
 char *get_input(void);
-bool check_format(char *cmd);
+bool check_format(char *expr, int *expr_index);
+char **parse_expression(char* expr);

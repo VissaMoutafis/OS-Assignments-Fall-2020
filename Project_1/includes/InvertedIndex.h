@@ -18,10 +18,10 @@ void invidx_insert(InvertedIndex invidx, Pointer student);
 // Delete a student from the index
 // if delete_entry == true then we free the student struct memory
 // otherwise we will keep the record at the old_entry pointer
-void invidx_delete(InvertedIndex invidx, Pointer Student, bool delete_entry, Pointer *old_entry);
+void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Pointer *old_entry);
 
 // Get the List of student at year
-void invidx_students_at(InvertedIndex invidx, int year);
+List invidx_students_at(InvertedIndex invidx, int year);
 
 // Free all the memory
 void invidx_destroy(InvertedIndex invidx);
