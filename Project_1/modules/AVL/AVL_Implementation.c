@@ -4,7 +4,7 @@ struct avl_node {
     AVLNode parent;
     AVLNode left;
     AVLNode right;
-    size_t height;
+    int height;
     Pointer key;
 };
 
@@ -19,6 +19,14 @@ struct avl_tree {
 AVLNode parent_node = NULL;
 
 // Utility functions
+//no need to use it 
+// void avl_print_in_order(AVLNode root) {
+//     if (!root) return;
+//     avl_print_in_order(root->left);
+//     printf(" %d ", *(int*)root->key);
+//     avl_print_in_order(root->right);
+// }
+
 AVLNode new_node(Pointer key, AVLNode parent, AVLNode left, AVLNode right) {
     assert(key != NULL);
 
@@ -32,19 +40,25 @@ AVLNode new_node(Pointer key, AVLNode parent, AVLNode left, AVLNode right) {
     return new_node;
 }
 
+//helper function
 static int int_max(int a, int b) {
     return (a > b) ? a : b;
 }
+//helper function
+static int get_height(AVLNode node) {
+    return node != NULL ? node->height : 0; // return the height of the node's subtree
+}
 
+// helper function
 static void update_height(AVLNode node) {
     if (node) {
-        node->height = 1 + int_max(node->height, node->height);
+        node->height = 1 + int_max(get_height(node->left), get_height(node->right));
     }
 }
 
 //check if a node is balanced
 static int get_balance(AVLNode node) {
-    return node->left->height - node->right->height;
+    return get_height(node->left) - get_height(node->right);
 }
 
 //There are 4 possible rotations
@@ -54,12 +68,11 @@ static int get_balance(AVLNode node) {
 // 4. right-left
 
 //Each of the following functions returns the root of the relative sub-tree
-static AVLNode rotateLeft(AVLNode node) {
+static AVLNode rotate_left(AVLNode node) {
     AVLNode right_node = node->right;
     AVLNode right_left_node = right_node->left;
 
-    if (right_node)
-        right_node->parent = node->parent;
+    right_node->parent = node->parent;
 
     right_node->left = node;
     node->parent = right_node;
@@ -68,15 +81,17 @@ static AVLNode rotateLeft(AVLNode node) {
     if(right_left_node)
         right_left_node->parent = node;
 
+    update_height(node);
+    update_height(right_node);
+    
     return right_node;
 }
 
-static AVLNode rotateRight(AVLNode node) {
+static AVLNode rotate_right(AVLNode node) {
     AVLNode left_node = node->left;
     AVLNode left_right_node = left_node->right;
 
-    if (left_node)
-        left_node->parent = node->parent;
+    left_node->parent = node->parent;
 
     left_node->right = node;
     node->parent = left_node;
@@ -84,6 +99,9 @@ static AVLNode rotateRight(AVLNode node) {
     node->left = left_right_node;
     if (left_right_node)
         left_right_node->parent = node;
+
+    update_height(node);
+    update_height(left_node);
 
     return left_node;
 }
@@ -111,9 +129,8 @@ static AVLNode restore_avl_property(AVLNode node) {
 
     } else if (get_balance(node) < -1) {
         // symmetrically right high
-        
         AVLNode right = node->right;
-        return get_balance(right) >= 0 ? rotate_left(node) : rotate_right_left(node);
+        return get_balance(right) <= 0 ? rotate_left(node) : rotate_right_left(node);
     }
 
     // if we reached this point then the sub-tree has the AVL Property
@@ -137,7 +154,8 @@ static AVLNode find_leftmost_node(AVL avl, AVLNode node, AVLNode *leftmost) {
     node->left = find_leftmost_node(avl, node->left, leftmost);
 
     // return the node so we don't  destroy the tree pointers
-    return node;
+    update_height(node);
+    return restore_avl_property(node);
 }
 // Following are some common recursive Binary Search Tree functions
 
@@ -153,7 +171,7 @@ static AVLNode find_rec(AVL avl, AVLNode node, Pointer key) {
 }
 
 // typical bst insert with checking for the avl property
-static AVLNode insert_rec(AVL avl, AVLNode node, Pointer key) {
+static AVLNode insert_rec(AVL avl, AVLNode node, Pointer key) { 
     // we reached the place that we must insert the node
     if (node == NULL) {
         avl->count++;
@@ -161,11 +179,14 @@ static AVLNode insert_rec(AVL avl, AVLNode node, Pointer key) {
     }
 
     parent_node = node; //keep the current parent in case next recursive call is the one we want
-    if (avl->compare(node->key, key) < 0) // if the key > node->key
+    
+    // BST traversing
+    if (avl->compare(node->key, key) < 0) // key > node->key
         node->right = insert_rec(avl, node->right, key);
-    else if (avl->compare(node->key, key) > 0) // if the key < node->key
+    else if (avl->compare(node->key, key) > 0) // key < node->key
         node->left = insert_rec(avl, node->left, key);
 
+    // AVL PROPERTY CHECK
     update_height(node); // update the node height
     return restore_avl_property(node); // check for avl property and return the proper subtree
 }
@@ -217,25 +238,25 @@ static AVLNode delete_rec(AVL avl, AVLNode node, Pointer key, bool delete_key, P
             update_height(node);
             return restore_avl_property(node);
         }
-
-        parent_node = node; // for later use maybe
-
-        // same traverse logic as always
-        if (avl->compare(node->key, key) < 0)
-            node->right = delete_rec(avl, node->right, key, delete_key, old_key);
-        else 
-            node->left = delete_rec(avl, node->left, key, delete_key, old_key);
-
-        // check for the avl property and restore it if needed
-        update_height(node);
-        return restore_avl_property(node);
     }
+
+    parent_node = node; // for later use maybe
+
+    // same traverse logic as always
+    if (avl->compare(node->key, key) < 0)
+        node->right = delete_rec(avl, node->right, key, delete_key, old_key);
+    else
+        node->left = delete_rec(avl, node->left, key, delete_key, old_key);
+
+    // check for the avl property and restore it if needed
+    update_height(node);
+    return restore_avl_property(node);
 }
 
 static void destroy_rec(AVL avl, AVLNode node) {
-    if (node == NULL)
+    if (!node)
         return;
-
+    
     // traverse the tree
     destroy_rec(avl, node->left);
     destroy_rec(avl, node->right);
@@ -261,6 +282,21 @@ AVL avl_create(Compare compare, ItemDestructor itemDestructor) {
     avl->root = NULL;
 
     return avl;
+}
+
+ItemDestructor avl_get_destructor(AVL avl) {
+    assert(avl);
+    return avl->itemDestructor;
+}
+
+void avl_set_destructor(AVL avl, ItemDestructor new_destructor) {
+    assert(avl);
+    avl->itemDestructor = new_destructor;
+}
+
+size_t avl_count(AVL avl) {
+    assert(avl);
+    return avl->count;
 }
 
 bool avl_empty(AVL avl) {
@@ -291,3 +327,4 @@ void avl_destroy(AVL avl) {
 AVLNode avl_node_get_key(AVL avl, AVLNode node) {
     return node != NULL ? node->key : NULL;
 }
+

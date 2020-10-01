@@ -1,53 +1,75 @@
-#include "acutest.h"
-#include "Types.h"
-#include "HT.h"
+#include "AVL.h"
+// #include "acutest.h"
+#include <stdio.h>
 #include <stdlib.h>
-Pointer create_int(int i)
+
+Pointer createInt(int n)
 {
-    int *p = malloc(sizeof(int));
-    *p = i;
-    return (Pointer) p;
+    Pointer pn = malloc(sizeof(int));
+    *(int *)pn = n;
+
+    return pn;
 }
 
 int compare(Pointer a, Pointer b)
 {
-    return *(int*)a - *(int*)b;
+    return *(int *)a - *(int *)b;
 }
 
-size_t hash(Pointer i)
+void test_insert(void)
 {
-    return (*(int*)i) * 25 + 2;
+    AVL t = avl_create(compare, free);
+    // TEST_CHECK(avl_count(t) == 0 && avl_empty(t) == true);
+
+    int n = 10;
+
+    for (int i = 0; i < n; i++)
+    { printf("Inserting : %d\n", i);
+        avl_insert(t, createInt(i));
+        // TEST_CHECK(avl_count(t) == i + 1);
+        // TEST_CHECK(*(int *)avl_node_get_key(t, avl_find(t, createInt(i))) == i);
+    }
+
+    // TEST_CHECK(avl_count(t) == n);
+    printf("Destroy...\n");
+    avl_destroy(t);
 }
 
-void test100(void)
+void test_delete(void)
 {
-    HT h = ht_create(compare, hash, free, 100);
+    AVL t = avl_create(compare, free);
+    // TEST_CHECK(avl_count(t) == 0 && avl_empty(t) == true);
 
-    for (size_t i=0; i < 100; ++i)
+    int n = 10;
+
+    for (int i = 0; i < n; i++)
     {
-        ht_insert(h, create_int(i));
-    }
-    
-    for (size_t i = 0; i < 100; ++i)
-    {
-        Pointer p = create_int(i), pk;
-        TEST_CHECK(ht_contains(h, p, &pk) == true && compare(pk, p) == 0);
-        free(p);
+        avl_insert(t, createInt(i));
+        // TEST_CHECK(avl_count(t) == i + 1);
+        // TEST_CHECK(avl_find(t, createInt(i)) != NULL);
     }
 
-    for (size_t i = 25; i < 50; ++i)
+    // TEST_CHECK(avl_count(t) == n);
+
+    for (int i = 0; i < n; i++)
     {
-        Pointer p = create_int(i), pk;
-        TEST_CHECK(ht_contains(h, p, &pk) == true && compare(pk, p) == 0);
-        ht_delete(h, p, true, &pk);
-        TEST_CHECK(ht_contains(h, p, &pk) == false);
-        free(p);
+        Pointer old;
+        avl_delete(t, createInt(i), true, &old);
+        // TEST_CHECK(avl_count(t) == n - 1 - i);
+        // TEST_CHECK(avl_find(t, createInt(i)) == NULL);
     }
-    ht_destroy(h);
+
+    avl_destroy(t);
+    return;
 }
 
-TEST_LIST =
-{
-    {"Testing 100 inserts", test100},
-    {NULL, NULL}
-};
+int main() {
+    // test_insert();
+    test_delete();
+}
+
+// TEST_LIST =
+//     {
+//         {"Insert Function", test_insert},
+//         {"Delete Function", test_delete},
+//         {NULL, NULL}};

@@ -26,8 +26,8 @@ bool ht_contains(HT hash_table, Pointer key, Pointer *key_ptr);
 // Other wise the key is stored in the key+ptr pointer
 void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr);
 
-// Function that will print all the keys in a specified-by-the-user way.
-void ht_print_keys(HT hash_table, Visit visit_key);
+// NOT NEEDED// Function that will print all the keys in a specified-by-the-user way.
+// void ht_print_keys(HT hash_table, Visit visit_key);
 
 // de-allocates the memory allocated for the hash table
 void ht_destroy(HT hash_table);
