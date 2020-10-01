@@ -1,7 +1,41 @@
-#include "Types.h"
-#include <stdio.h>
-#include <string.h>
+#include "ParsingUtils.h"
 
+char **parse_voter_data(char *data_str, int *columns) {
+    // Initialize the columns counter
+    *columns = 0;
+    
+    char **data = NULL;
+    char *sep = ","; //determine the separator for the strtok function
+
+    // split the str to all space-separated substring
+    char *tok = strtok(data_str, sep);
+
+    while (tok != NULL) {
+        // for all the tokens we just keep on going to parse the data correclty
+
+        // increase the counter
+        (*columns)++;
+        // //resize the array
+        char **new_data = calloc(*columns, sizeof(char *));
+
+        if (data != NULL) {
+            memcpy(new_data, data, ((*columns) - 1) * sizeof(char *));
+            free(data);
+        }
+
+        // re-assign the old data table to the new one
+        data = new_data;
+
+        // create a copy of the token
+        data[(*columns) - 1] = malloc((strlen(tok) + 1) * sizeof(char));
+        // .. and add i to the data table
+        strcpy(data[(*columns) - 1], tok);
+
+        tok = strtok(NULL, sep);
+    }
+
+    return data;
+}
 
 char *make_str(FILE **_stream_) {
     /*
@@ -9,7 +43,7 @@ char *make_str(FILE **_stream_) {
     ** there is no need to enter a string length
     ** WARNING: It returns the whole line and only the line. Parse it carefully.
     */
-   
+
     // First we will get the line
     unsigned int len = 1;
     char *str = calloc(1, sizeof(char));
@@ -46,4 +80,18 @@ size_t fget_lines(char *filename) {
     fclose(fin);
 
     return count;
+}
+
+int main(void) {
+    size_t lines = fget_lines("./input.txt");
+    FILE *fin = fopen("./input.txt", "r");
+    for (int i = 0; i < (int)lines; i++){
+        char* data_str = make_str(&fin);
+        printf("%s\n", data_str);
+        int data_cols;
+        char ** data_table = parse_voter_data(data_str, &data_cols);
+        for (int j = 0; j < data_cols; j++) 
+            printf("Data col #%d : %s\n", j+1, data_table[j]);
+        printf("\n------------------------------\n");
+    }
 }

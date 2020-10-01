@@ -1,6 +1,4 @@
-#include "Types.h"
-#include <string.h>
-#include <stdio.h>
+#include "ParsingUtils.h"
 
 void error_handle(char **a) {
     // wrong input

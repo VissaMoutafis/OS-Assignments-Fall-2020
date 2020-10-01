@@ -10,6 +10,8 @@ CFLAGS += -I$(INCLUDE) -Wall -g3 -Ofast
 
 OBJS = testHashtable.o
 
+ARGS = -i input.txt
+
 include $(MODULES)/modules.inc
 
 $(PROGRAM) : $(OBJS) 

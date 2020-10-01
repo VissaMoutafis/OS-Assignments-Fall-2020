@@ -20,4 +20,5 @@ void invidx_delete(InvertedIndex invidx, Pointer Student, bool delete_entry, Poi
 // Get the List of student at year
 void invidx_students_at(InvertedIndex invidx, int year);
 
+// Free all the memory
 void invidx_destroy(InvertedIndex invidx);
