@@ -18,7 +18,7 @@ int std_gpa_compare(Pointer s1, Pointer s2);    // student gpa comparison functi
 Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa, bool deep_copy) {
     Student s = malloc(sizeof(*s));
 
-    if (deep_copy == false) {
+    if (!deep_copy) {
         // shallow copy
         s->first_name = first_name;
         s->last_name = last_name;
@@ -97,9 +97,20 @@ void initialize_with(char* filename, ManageStudents mngstd) {
 }
 int get_restistrants_at(InvertedIndex invidx, int year) {
     List student_list = invidx_students_at(invidx, year);
+    printf("%d -> %d\n", year, list_len(student_list));
     return student_list != NULL ? list_len(student_list) : 0;
 }
+static float avg_gpa(List std_list) {
+    ListNode n = list_get_head(std_list);
+    float sum = 0;
+    while(n) {
+        Pointer e = (Student)list_node_get_entry(std_list,n);
+        sum += ((Student)e)->gpa;
+        n = list_get_next(std_list, n);
+    }
 
+    return (float) (sum/((float)list_len(std_list)));
+}
 // Manage Student D.S.
 
 // constructor
@@ -195,6 +206,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     } else if (expr_index == 4) {
         // command: top n-th students, value: n year
         int cols;
+        printf("%s\n", value);
         char ** data = parse_line(value, &cols, " ");
 
         if (cols == 2 && is_numeric(data[0]) && is_numeric(data[1])) {
@@ -209,16 +221,26 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 // deallocate the memory
                 list_destroy(&top_n_th);
             } else {
-                printf("No students enrolled in year.\n");
+                printf("> No students enrolled in %s.\n", data[1]);
             }
+            // for (int i = 0; i < cols; i++)
+            //     free(data[i]);
+            // free(data);
         } else {
-            printf("No students enrolled in year.\n");
+            printf("> No students enrolled in %s.\n", data[1]);
         }
-        for (int i = 0; i < cols; i++) free(data[i]);
-        free(data);
+        
 
     } else if (expr_index == 5) {
-        
+        if (is_numeric(value)) {
+            int year = strtol(value, NULL, 10);
+            List std_list = invidx_students_at(manager->year_of_study_idx, year);
+            if (list_len(std_list) > 0) {
+                printf("> Avg GPA for %s : %.2f\n", value, avg_gpa(std_list));
+            }
+        } else {
+            printf("> No students enrolled in %s", value);
+        }
     } else if (expr_index == 6) {
 
     } else if (expr_index == 7) {
@@ -232,8 +254,6 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     } else {
         help();
     }
-
-    free(value);
 }
 
 int student_compare(Pointer s1, Pointer s2) {

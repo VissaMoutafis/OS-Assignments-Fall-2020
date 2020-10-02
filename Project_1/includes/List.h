@@ -42,6 +42,9 @@ void list_destroy(List *list);
 
 // List Node methods
 
+// get the next node
+ListNode list_get_next(List list, ListNode node);
+
 // Getter for the node entry
 Pointer list_node_get_entry(List list, ListNode node);
 

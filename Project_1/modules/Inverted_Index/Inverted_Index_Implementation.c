@@ -67,12 +67,11 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        List std_list = entry->students;
 
         // Now we make sure that this student does not exist in the list
-        if (!list_find(std_list, student))
+        if (!list_find(entry->students, student))
             // if not then add the student
-            list_insert(std_list, student, true);
+            list_insert(entry->students, student, true);
 
     } else {
         // case that the list does not exist
@@ -108,12 +107,12 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        List std_list = entry->students;
 
         // If the node exists in the index list delete it
         if (list_find(entry->students, student)) 
             list_delete(entry->students, student, true, old_entry);
     }
+    
 }
 
 List invidx_students_at(InvertedIndex invidx, int year) {
