@@ -180,7 +180,7 @@ void list_destroy(List *list) {
         // free the memory
         if ((*list)->itemDestructor) {
             (*list)->itemDestructor(cur->entry);
-            }
+        }
         free(cur);
 
         // get to the next node
@@ -215,6 +215,7 @@ void list_print(List list, Visit visit) {
 
     while (cur != LIST_EOF) {
         visit(cur->entry);
+        cur = cur->next;
     }
 }
 
@@ -226,6 +227,7 @@ Pointer list_find_max(List list, Compare compare) {
     while (n != LIST_EOF) {
         cur = n->entry;
         max = compare(cur, max) > 0 ? cur : max;
+        n = n->next;
     }
 
     return max;
@@ -234,7 +236,7 @@ Pointer list_find_max(List list, Compare compare) {
 void list_insert_sorted(List list, Pointer entry, Compare compare) {
     ListNode c = list->head; 
     
-    while (c != LIST_EOF && compare(c->entry, entry) >= 0) {
+    while (c != LIST_EOF && compare(c->entry, entry) > 0) {
         // while c is in the list and the c->entry > entry
         c = c->next;
     }
@@ -246,23 +248,44 @@ void list_insert_sorted(List list, Pointer entry, Compare compare) {
 
     if (c != NULL){ 
         new_node->prev = c->prev;
-        c->prev = new_node;
+
         if (c->prev)
             c->prev->next = new_node;
+
+        c->prev = new_node;
     } else {
+        // we add it at the end of the list
+        new_node->prev = list->tail;
+        if (list->tail)
+            list->tail->next = new_node;
         list->tail = new_node;
     }
+
+    list->count ++;
 }
 
 List list_get_top_n(List list, Compare compare, int n) {
     ListNode cur= list->head;
-    
-    List top_n_th = list_create(list->compare, list->itemDestructor);
+    cur = list->head;
+    List top_n_th = list_create(list->compare, NULL);
     // while we reach the n_th top or the list ends
-    while(n > 0 && cur != LIST_EOF) {
+    while(cur != NULL) {
             list_insert_sorted(top_n_th, cur->entry, compare);
             cur = cur->next;
-            n--;
+    }
+    int to_delete = list->count - n;
+
+    if (to_delete > 0 && n >= 0) {
+        while(to_delete-- && !list_empty(top_n_th)) {
+            ListNode tail = top_n_th->tail;
+            if (top_n_th->tail){
+                top_n_th->tail = tail->prev;
+                top_n_th->tail->next = NULL;
+            } else 
+                top_n_th->head = top_n_th->tail;
+            free(tail);
+            
+        }
     }
     return top_n_th;
 }

@@ -58,9 +58,11 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
     dummy->year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
+    int year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
 
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
+    free(dummy);
     if (cur) {
         // if such list exist
         // make clean that the entry is an Index
@@ -76,7 +78,7 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         // case that the list does not exist
 
         // create new index with a list 
-        Index new_index = create_index(dummy->year, invidx->compare, invidx->itemDestructor); 
+        Index new_index = create_index(year, invidx->compare, invidx->itemDestructor); 
         
         // add the student to the index list
         list_insert(new_index->students, student, true);
@@ -101,6 +103,7 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
     dummy->year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
+    free(dummy);
     if (cur) {
         // if such list exist
         // make clean that the entry is an Index
@@ -120,12 +123,11 @@ List invidx_students_at(InvertedIndex invidx, int year) {
 
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
-    
+    free(dummy);
     if (cur) {
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
-        printf("Size: %d\n", list_len(entry->students));
         return entry->students;
     }
     

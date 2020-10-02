@@ -18,7 +18,7 @@ int std_gpa_compare(Pointer s1, Pointer s2);    // student gpa comparison functi
 Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa, bool deep_copy) {
     Student s = malloc(sizeof(*s));
 
-    if (!deep_copy) {
+    if (deep_copy == false) {
         // shallow copy
         s->first_name = first_name;
         s->last_name = last_name;
@@ -59,6 +59,8 @@ static void insert_student(ManageStudents manager, char **data_table) {
     // Insert the student record in the structs
     ht_insert(manager->students, std);
     invidx_insert(manager->year_of_study_idx, std);
+    free(data_table[4]);
+    free(data_table[5]);
     printf("> Student '%s' inserted.\n", data_table[0]);
 }
 
@@ -90,10 +92,11 @@ void initialize_with(char* filename, ManageStudents mngstd) {
         // error message
         printf("> Warning: Cannot Open File with path'%s'\n", filename);
     }
+
+    fclose(fin);
 }
 int get_restistrants_at(InvertedIndex invidx, int year) {
     List student_list = invidx_students_at(invidx, year);
-    printf("%d -> %d\n", year, list_len(student_list));
     return student_list != NULL ? list_len(student_list) : 0;
 }
 
@@ -140,11 +143,10 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             
             for (int i = 0; i < cols; i++)
                 free(data_table[i]);
-
-            free(data_table);
         }
         
         student_destructor(dummy);
+        free(data_table);
     } else if (expr_index == 1) {
         // command: look-up in ht, value: stuednt_id
         Pointer s;
@@ -194,15 +196,26 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
         // command: top n-th students, value: n year
         int cols;
         char ** data = parse_line(value, &cols, " ");
+
         if (cols == 2 && is_numeric(data[0]) && is_numeric(data[1])) {
             int n = strtol(data[0], NULL, 10), year = strtol(data[1], NULL, 10);
+            
             List student_list = invidx_students_at(manager->year_of_study_idx, year); // returns the invidx entry so dont destroy it
-            List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);
-            list_print(top_n_th, student_visit);
+            if (student_list && list_len(student_list) > 0) {
+                List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);
+                
+                // print the list
+                list_print(top_n_th, student_visit);
+                // deallocate the memory
+                list_destroy(&top_n_th);
+            } else {
+                printf("No students enrolled in year.\n");
+            }
         } else {
-            printf("False arguments.\n");
-            help();
+            printf("No students enrolled in year.\n");
         }
+        for (int i = 0; i < cols; i++) free(data[i]);
+        free(data);
 
     } else if (expr_index == 5) {
         
@@ -219,6 +232,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     } else {
         help();
     }
+
+    free(value);
 }
 
 int student_compare(Pointer s1, Pointer s2) {
@@ -228,9 +243,9 @@ int student_compare(Pointer s1, Pointer s2) {
 
 int std_gpa_compare(Pointer s1, Pointer s2) {
     Student std1 = (Student)s1, std2 = (Student)s2;
-    if (std1->gpa > std2->gpa)
+    if (std1->gpa - std2->gpa > 0.0)
         return 1;
-    else if(std1->gpa < std2->gpa)
+    else if(std1->gpa - std2->gpa < 0.0)
         return -1;
     
     return 0;
@@ -241,7 +256,7 @@ void student_destructor(Pointer s) {
     if (std->last_name) free(std->last_name);
     if(std->postal) free(std->postal);
     if(std->student_id) free(std->student_id);
-    free(std);
+    free(s);
 }
 
 size_t student_hash(Pointer s) {

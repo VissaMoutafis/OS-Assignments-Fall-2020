@@ -190,7 +190,7 @@ void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr) {
 // Simple function to free the memory
 void ht_destroy(HT hash_table)
 {
-    printf("collisions / item_count = %.1f", (float)cnt);
+    // printf("collisions / item_count = %.1f", (float)cnt);
     for (size_t i = 0; i < hash_table->size; ++i) {
         // if the list-slot is not empty then free the memory
         if (!is_empty_slot(hash_table->array[i]))

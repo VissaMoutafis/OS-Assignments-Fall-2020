@@ -6,7 +6,7 @@ INCLUDE = ./includes
 
 MODULES = ./modules
 
-CFLAGS += -I$(INCLUDE) -Wall -g3 -Ofast
+CFLAGS += -I$(INCLUDE) -Wall -g3
 
 OBJS = mngstd.o
 
