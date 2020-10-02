@@ -6,21 +6,48 @@ struct mngstd {
     size_t student_count;
 };
 
+// Function Declarations
+int student_compare(Pointer s1, Pointer s2);    // students comparison function
+void student_destructor(Pointer s);             // student destruction function
+size_t student_hash(Pointer s);                 // student hashing function
+void student_visit(Pointer s);                  // student printing function
+
 /// Utility Functions
-Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa) {
+Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa, bool deep_copy) {
     Student s = malloc(sizeof(*s));
 
-    s->first_name = first_name;
-    s->last_name = last_name;
-    s->student_id = student_id;
+    if (!deep_copy) {
+        // shallow copy
+        s->first_name = first_name;
+        s->last_name = last_name;
+        s->student_id = student_id;
+        s->postal = postal;
+
+    } else {
+        // deep copy
+        s->student_id = student_id ? calloc(strlen(student_id)+1, sizeof(char)) : NULL;
+        if (student_id) strcpy(s->student_id, student_id);
+
+        s->first_name = first_name ? calloc(strlen(first_name)+1, sizeof(char)) : NULL;
+        if (first_name) strcpy(s->first_name, first_name);
+
+        s->last_name = last_name ? calloc(strlen(last_name)+1, sizeof(char)) : NULL;
+        if (last_name) strcpy(s->last_name, last_name);
+
+        s->postal = postal ? calloc(strlen(postal)+1, sizeof(char)) : NULL;
+        if (postal) strcpy(s->postal, postal);
+    }
+
+    // arithmetics are the same in deep and shallow copy
     s->gpa = gpa;
-    s->postal = postal;
     s->year_of_registration = year_of_rgstr;
 
     return s;
 }
+
 void initialize_with(char* filename, ManageStudents mngstd) {
     // open the file
+
     FILE* fin = filename != NULL ? fopen(filename, "r") : NULL;
     // erro checking for the file
     if (fin) {
@@ -38,7 +65,7 @@ void initialize_with(char* filename, ManageStudents mngstd) {
                                     data_table[2], 
                                     data_table[3], 
                                     strtol(data_table[4], NULL, 10), 
-                                    strtof(data_table[5], NULL));
+                                    strtof(data_table[5], NULL), false);
             ht_insert(mngstd->students, std);
             invidx_insert(mngstd->year_of_study_idx, std);
 
@@ -65,10 +92,11 @@ int get_restistrants_at(InvertedIndex invidx, int year) {
 // constructor
 ManageStudents mngstd_create(Compare std_compare, ItemDestructor std_destructor, Hash_Func std_hash_func, char* in_filename) {
     // create the struct
+
     ManageStudents mngstd = malloc(sizeof(*mngstd));    
     
     size_t num_of_entries = DEFAULT_ENTRIES;
-    
+
     // creation
     mngstd->student_count = 0;    
     mngstd->students = ht_create(std_compare, std_hash_func, std_destructor, num_of_entries);
@@ -88,86 +116,90 @@ void mngstd_destroy(ManageStudents manager) {
 
 
 
-// void mngstd_run(ManageStudents manager, int expr_index, char* value) {
-//     if (expr_index == 0) {
-//         // command: insert, value: student data
-//         char **data_table = parse_line(value, &data_table, " ");
+void mngstd_run(ManageStudents manager, int expr_index, char* value) {
+    if (expr_index == 0) {
+        // command: insert, value: student data
+        int cols;
+        char **data_table = parse_line(value, &cols, " ");
+        // REMEMBER TO FIND A WAY TO FILL INCOMPLETE ENTRIES
 
-//         // create the student instance and add it in the structs
-//         Student std = create_std(data_table[0],
-//                                  data_table[1],
-//                                  data_table[2],
-//                                  data_table[3],
-//                                  strtol(data_table[4], NULL, 10),
-//                                  strtof(data_table[5], NULL));
-//         ht_insert(manager->students, std);
-//         invidx_insert(manager->year_of_study_idx, std);
+        // create the student instance and add it in the structs
+        Student std = create_std(data_table[0],
+                                 data_table[1],
+                                 data_table[2],
+                                 data_table[3],
+                                 strtol(data_table[4], NULL, 10),
+                                 strtof(data_table[5], NULL), false);
 
-//     } else if (expr_index == 1) {
-//         // command: look-up in ht, value: stuednt_id
-//         Pointer s;
-//         Student dummy = create_std(value, "", "", "", 0, 0.0);
-//         if (ht_contains(manager->students, dummy, &s)) {
-//             Student std = (Student)s;
-//             printf("> Student Info :\n");
-//             student_visit(std);
-//         } else {
-//             printf("> The student with student id : '%d' does not exist in the records.\n", value);
-//         }
-//         student_destructor(dummy);
+        // Insert the student record in the structs
+        ht_insert(manager->students, std);
+        invidx_insert(manager->year_of_study_idx, std);
+
+    } else if (expr_index == 1) {
+        // command: look-up in ht, value: stuednt_id
+        Pointer s;
+        Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
+        if (ht_contains(manager->students, dummy, &s)) {
+            Student std = (Student)s;
+            printf("> Student Info :\n");
+            student_visit(std);
+        } else {
+            printf("> The student with student id : '%s' does not exist in the records.\n", value);
+        }
+        student_destructor(dummy);
     
-//     } else if (expr_index == 2) {
-//         // command: delete, value: student id
-//         Student dummy = create_std(value, "", "", "", 0, 0.0);
-//         Pointer s;
-//         if (ht_contains(manager->students, dummy, &s)) {
-//             // delete it first from the index
-//             invidx_delete(manager->year_of_study_idx, dummy, true, &s);
-//             // now delete it from the hash table to delete it normally
-//             ht_delete(manager->students, dummy, true, &s);
-//         }
+    } else if (expr_index == 2) {
+        // command: delete, value: student id
+        Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
+        Pointer s;
+        if (ht_contains(manager->students, dummy, &s)) {
+            // delete it first from the index
+            invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+            // now delete it from the hash table to delete it normally
+            ht_delete(manager->students, dummy, true, &s);
+        }
 
-//         student_destructor(dummy);
+        student_destructor(dummy);
     
-//     } else if (expr_index == 3) {
-//         // command: number of restistrants, value: alpharethmetic for the year
-//         if (is_numeric(value)) {
-//             int year = strtol(value, NULL, 10);
+    } else if (expr_index == 3) {
+        // command: number of restistrants, value: alpharethmetic for the year
+        if (is_numeric(value)) {
+            int year = strtol(value, NULL, 10);
 
-//             // made up function to query the number of registrants in a year
-//             int students = get_restistrants_at(manager->year_of_study_idx, year); // To be implemented
-//             printf("> The number of students at year of study %d, is %d", year, students);
-//         } else {
-//             printf("The year must be a numeric value.\n");
-//         }    
+            // made up function to query the number of registrants in a year
+            int students = get_restistrants_at(manager->year_of_study_idx, year); // To be implemented
+            printf("> The number of students at year of study %d, is %d", year, students);
+        } else {
+            printf("The year must be a numeric value.\n");
+        }    
 
-//     } else if (expr_index == 4) {
-//         // command: top n-th students, value: n year
-//         int cols;
-//         char ** data = parse_line(value, &cols, " ");
-//         if (cols < 3) {
-//             // find the top n students some how
-//         } else {
-//             printf("Too many arguments.\n");
-//             help();
-//         }
+    } else if (expr_index == 4) {
+        // command: top n-th students, value: n year
+        int cols;
+        char ** data = parse_line(value, &cols, " ");
+        if (cols < 3) {
+            // find the top n students some how
+        } else {
+            printf("Too many arguments.\n");
+            help();
+        }
 
-//     } else if (expr_index == 5) {
+    } else if (expr_index == 5) {
+        
+    } else if (expr_index == 6) {
 
-//     } else if (expr_index == 6) {
+    } else if (expr_index == 7) {
 
-//     } else if (expr_index == 7) {
+    } else if (expr_index == 8) {
 
-//     } else if (expr_index == 8) {
-
-//     } else if (expr_index == 9) {
-//         // command : exit, value = NULL
-//         is_end = true;
-//         return;
-//     } else {
-//         help();
-//     }
-// }
+    } else if (expr_index == 9) {
+        // command : exit, value = NULL
+        is_end = true;
+        return;
+    } else {
+        help();
+    }
+}
 
 int student_compare(Pointer s1, Pointer s2) {
     Student std1 = (Student)s1, std2 = (Student)s2;
@@ -176,10 +208,10 @@ int student_compare(Pointer s1, Pointer s2) {
 
 void student_destructor(Pointer s) {
     Student std = (Student)s;
-    free(std->first_name);
-    free(std->last_name);
-    free(std->postal);
-    free(std->student_id);
+    if (std->first_name) free(std->first_name);
+    if (std->last_name) free(std->last_name);
+    if(std->postal) free(std->postal);
+    if(std->student_id) free(std->student_id);
     free(std);
 }
 
@@ -219,17 +251,27 @@ int main(int argc, char **argv) {
     char **arguments;
     int size;
     args_parser(argc, argv, &arguments, &size); // Something must be done for the configurations
-    // ManageStudents manager = mngstd_create(student_compare, student_destructor, student_hash, argv[0]);
+    
+    // Initiaze the struct
+    ManageStudents manager = mngstd_create(student_compare, student_destructor, student_hash, arguments[0]);
+    // turn the is_end pointer to false
     is_end = false;
-    for (int i = 0; i < size; i++) printf("Argument #%d: %s\n", i, arguments[i]);
-     // while (manager && !is_end) {
-    while (true) {
+
+    while (manager && !is_end) {
+        // Get the tty expression
         char *expr = get_input();
-        char **parsed_cmd = parse_expression(expr); ///THIS FUNCTION MUST BE IMPLEMENTED
+        // Parse the expression
+        char **parsed_cmd = parse_expression(expr); // parse the given experssion (format:~$ command value)
+        
+        // make clean what we are talking about
+        char *command = parsed_cmd[0];
+        char *value = parsed_cmd[1];
         int expr_index;
-        if (check_format(parsed_cmd[0], &expr_index) == true)
-            // mngstd_run(manager, expr_index, parsed_cmd[1]);
-            printf("The program will run {command: %s, value: %s}\n", parsed_cmd[0], parsed_cmd[1]);
+
+        // check if the expression is right and 
+        if (check_format(command, &expr_index) == true)
+            mngstd_run(manager, expr_index, value);
+            // printf("The program will run {command: %s, value: %s}\n", parsed_cmd[0], parsed_cmd[1]);
         else
             help();
 
@@ -239,5 +281,11 @@ int main(int argc, char **argv) {
         free(parsed_cmd);
     }
 
-    // mngstd_destroy(manager); // to be implemented
+    // de-allocate the memory
+    mngstd_destroy(manager);
+
+    for(int i = 0; i < size; ++i) 
+        free(arguments[i]);
+
+    free(arguments);
 }
