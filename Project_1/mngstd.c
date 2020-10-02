@@ -16,6 +16,8 @@ Pointer create_std(char *student_id, char *last_name, char *first_name , char *p
     s->gpa = gpa;
     s->postal = postal;
     s->year_of_registration = year_of_rgstr;
+
+    return s;
 }
 void initialize_with(char* filename, ManageStudents mngstd) {
     // open the file
@@ -28,7 +30,7 @@ void initialize_with(char* filename, ManageStudents mngstd) {
             // take the data string from the file and turn it to a data table
             char* data_str = make_str(&fin);
             int data_cols;
-            char** data_table = parse_line(data_str, &data_table, ",");
+            char** data_table = parse_line(data_str, &data_cols, ",");
 
             // create the student instance and add it in the structs
             Student std = create_std(data_table[0], 
@@ -86,86 +88,86 @@ void mngstd_destroy(ManageStudents manager) {
 
 
 
-void mngstd_run(ManageStudents manager, int expr_index, char* value) {
-    if (expr_index == 0) {
-        // command: insert, value: student data
-        char **data_table = parse_line(value, &data_table, " ");
+// void mngstd_run(ManageStudents manager, int expr_index, char* value) {
+//     if (expr_index == 0) {
+//         // command: insert, value: student data
+//         char **data_table = parse_line(value, &data_table, " ");
 
-        // create the student instance and add it in the structs
-        Student std = create_std(data_table[0],
-                                 data_table[1],
-                                 data_table[2],
-                                 data_table[3],
-                                 strtol(data_table[4], NULL, 10),
-                                 strtof(data_table[5], NULL));
-        ht_insert(manager->students, std);
-        invidx_insert(manager->year_of_study_idx, std);
+//         // create the student instance and add it in the structs
+//         Student std = create_std(data_table[0],
+//                                  data_table[1],
+//                                  data_table[2],
+//                                  data_table[3],
+//                                  strtol(data_table[4], NULL, 10),
+//                                  strtof(data_table[5], NULL));
+//         ht_insert(manager->students, std);
+//         invidx_insert(manager->year_of_study_idx, std);
 
-    } else if (expr_index == 1) {
-        // command: look-up in ht, value: stuednt_id
-        Pointer s;
-        Student dummy = create_std(value, "", "", "", 0, 0.0);
-        if (ht_contains(manager->students, dummy, &s)) {
-            Student std = (Student)s;
-            printf("> Student Info :\n");
-            student_visit(std);
-        } else {
-            printf("> The student with student id : '%d' does not exist in the records.\n", value);
-        }
-        student_destructor(dummy);
+//     } else if (expr_index == 1) {
+//         // command: look-up in ht, value: stuednt_id
+//         Pointer s;
+//         Student dummy = create_std(value, "", "", "", 0, 0.0);
+//         if (ht_contains(manager->students, dummy, &s)) {
+//             Student std = (Student)s;
+//             printf("> Student Info :\n");
+//             student_visit(std);
+//         } else {
+//             printf("> The student with student id : '%d' does not exist in the records.\n", value);
+//         }
+//         student_destructor(dummy);
     
-    } else if (expr_index == 2) {
-        // command: delete, value: student id
-        Student dummy = create_std(value, "", "", "", 0, 0.0);
-        Pointer s;
-        if (ht_contains(manager->students, dummy, &s)) {
-            // delete it first from the index
-            invidx_delete(manager->year_of_study_idx, dummy, true, &s);
-            // now delete it from the hash table to delete it normally
-            ht_delete(manager->students, dummy, true, &s);
-        }
+//     } else if (expr_index == 2) {
+//         // command: delete, value: student id
+//         Student dummy = create_std(value, "", "", "", 0, 0.0);
+//         Pointer s;
+//         if (ht_contains(manager->students, dummy, &s)) {
+//             // delete it first from the index
+//             invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+//             // now delete it from the hash table to delete it normally
+//             ht_delete(manager->students, dummy, true, &s);
+//         }
 
-        student_destructor(dummy);
+//         student_destructor(dummy);
     
-    } else if (expr_index == 3) {
-        // command: number of restistrants, value: alpharethmetic for the year
-        if (is_numeric(value)) {
-            int year = strtol(value, NULL, 10);
+//     } else if (expr_index == 3) {
+//         // command: number of restistrants, value: alpharethmetic for the year
+//         if (is_numeric(value)) {
+//             int year = strtol(value, NULL, 10);
 
-            // made up function to query the number of registrants in a year
-            int students = get_restistrants_at(manager->year_of_study_idx, year); // To be implemented
-            printf("> The number of students at year of study %d, is %d", year, students);
-        } else {
-            printf("The year must be a numeric value.\n");
-        }    
+//             // made up function to query the number of registrants in a year
+//             int students = get_restistrants_at(manager->year_of_study_idx, year); // To be implemented
+//             printf("> The number of students at year of study %d, is %d", year, students);
+//         } else {
+//             printf("The year must be a numeric value.\n");
+//         }    
 
-    } else if (expr_index == 4) {
-        // command: top n-th students, value: n year
-        int cols;
-        char ** data = parse_line(value, &cols, " ");
-        if (cols < 3) {
-            // find the top n students some how
-        } else {
-            printf("Too many arguments.\n");
-            help();
-        }
+//     } else if (expr_index == 4) {
+//         // command: top n-th students, value: n year
+//         int cols;
+//         char ** data = parse_line(value, &cols, " ");
+//         if (cols < 3) {
+//             // find the top n students some how
+//         } else {
+//             printf("Too many arguments.\n");
+//             help();
+//         }
 
-    } else if (expr_index == 5) {
+//     } else if (expr_index == 5) {
 
-    } else if (expr_index == 6) {
+//     } else if (expr_index == 6) {
 
-    } else if (expr_index == 7) {
+//     } else if (expr_index == 7) {
 
-    } else if (expr_index == 8) {
+//     } else if (expr_index == 8) {
 
-    } else if (expr_index == 9) {
-        // command : exit, value = NULL
-        is_end = true;
-        return;
-    } else {
-        help();
-    }
-}
+//     } else if (expr_index == 9) {
+//         // command : exit, value = NULL
+//         is_end = true;
+//         return;
+//     } else {
+//         help();
+//     }
+// }
 
 int student_compare(Pointer s1, Pointer s2) {
     Student std1 = (Student)s1, std2 = (Student)s2;
@@ -201,8 +203,11 @@ void student_visit(Pointer s) {
     Student std = (Student)s;
     printf("\n--------------------------------------------\nStudent Id: %s,\
      Name: %s, Surname: %s, Postal Code: %s,\
-     Year of Registration: %lu, GPA: %.2f\
-     \n--------------------------------------------\n")
+     Year of Registration: %d, GPA: %.2f\
+     \n--------------------------------------------\n",
+           std->student_id, std->first_name, 
+           std->last_name, std->postal, 
+           std->year_of_registration, std->gpa);
 }
 
 int main(int argc, char **argv) {
@@ -214,15 +219,17 @@ int main(int argc, char **argv) {
     char **arguments;
     int size;
     args_parser(argc, argv, &arguments, &size); // Something must be done for the configurations
-    ManageStudents manager = mngstd_create(student_compare, student_destructor, student_hash, argv[0]);
+    // ManageStudents manager = mngstd_create(student_compare, student_destructor, student_hash, argv[0]);
     is_end = false;
-    
-    while (manager && !is_end) {
+    for (int i = 0; i < size; i++) printf("Argument #%d: %s\n", i, arguments[i]);
+     // while (manager && !is_end) {
+    while (true) {
         char *expr = get_input();
         char **parsed_cmd = parse_expression(expr); ///THIS FUNCTION MUST BE IMPLEMENTED
-        unsigned int expr_index;
-        if (is_valid(parsed_cmd[0], &expr_index) == true)
-            mngstd_run(manager, expr_index, parsed_cmd[1]);
+        int expr_index;
+        if (check_format(parsed_cmd[0], &expr_index) == true)
+            // mngstd_run(manager, expr_index, parsed_cmd[1]);
+            printf("The program will run {command: %s, value: %s}\n", parsed_cmd[0], parsed_cmd[1]);
         else
             help();
 
@@ -232,5 +239,5 @@ int main(int argc, char **argv) {
         free(parsed_cmd);
     }
 
-    mngstd_destroy(manager); // to be implemented
+    // mngstd_destroy(manager); // to be implemented
 }

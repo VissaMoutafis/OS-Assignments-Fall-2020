@@ -1,4 +1,4 @@
-PROGRAM = testHashtable
+PROGRAM = mngstd
 
 CC = gcc
 
@@ -8,7 +8,7 @@ MODULES = ./modules
 
 CFLAGS += -I$(INCLUDE) -Wall -g3 -Ofast
 
-OBJS = testHashtable.o
+OBJS = mngstd.o
 
 ARGS = -i input.txt
 

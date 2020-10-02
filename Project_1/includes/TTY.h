@@ -8,34 +8,13 @@
 
 // ###################### Caller can change this to apply to his constraints ############### //
 // all the possible commands for the tty API of the app
-int pos_cmds_len = 10;
+int pos_cmds_len;
 
 // for format checking
-char *allowed_formats[10] = {
-    "i",
-    "l",
-    "d",
-    "n",
-    "t",
-    "a",
-    "m",
-    "c",
-    "p",
-    "exit"
-    };
+char *allowed_formats[10];
 
 // for help printing
-char *possible_commands[10] = {
-    "i(nsert) [studentid, lastname, firstname, zip, year, gpa]",
-    "l(ook-up) [studentid]",
-    "d(elete) [studentid]",
-    "n(umber) [year]",
-    "t(op) num [year]",
-    "a(verage) [year]",
-    "m(inimum) [year]",
-    "c(ount)",
-    "p(ostal code) [rank]",
-    "exit"};
+char *possible_commands[10];
     
 
 // Methods to print messages

@@ -176,15 +176,15 @@ void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr) {
         *key_ptr = NULL;
 }
 
-// helping function
-static void ht_print_keys(HT hash_table, Visit visit_key) {
-    for (size_t i = 0; i < hash_table->size; ++i) {
-        // if the slot is not empty then visit the key and display it.
-        // The diplay manner is determined by the caller
-        if (!is_empty_slot(hash_table->array[i]))
-            visit_key(hash_table->array[i]);
-    }
-}
+// // helping function
+// static void ht_print_keys(HT hash_table, Visit visit_key) {
+//     for (size_t i = 0; i < hash_table->size; ++i) {
+//         // if the slot is not empty then visit the key and display it.
+//         // The diplay manner is determined by the caller
+//         if (!is_empty_slot(hash_table->array[i]))
+//             visit_key(hash_table->array[i]);
+//     }
+// }
 
 
 // Simple function to free the memory

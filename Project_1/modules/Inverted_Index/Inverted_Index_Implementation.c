@@ -5,7 +5,7 @@
 #include "InvertedIndex.h"
 
 struct inverted_index {
-    List *indexes;
+    List indexes;
     Compare compare;
     ItemDestructor itemDestructor;
     size_t item_count;
@@ -26,7 +26,7 @@ Index create_index(int year, Compare compare, ItemDestructor destructor) {
 
     return idx;
 }
-compare_index(Pointer y1, Pointer y2) {
+int compare_index(Pointer y1, Pointer y2) {
     return ((Index)y1)->year - ((Index)y2)->year;
 }
 
@@ -76,7 +76,7 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
         // case that the list does not exist
 
         // create new index with a list 
-        Index new_index = create_index(dummy->year, invidx->compare, invidx->compare); 
+        Index new_index = create_index(dummy->year, invidx->compare, invidx->itemDestructor); 
         
         // add the student to the index list
         list_insert(new_index->students, student, true);
