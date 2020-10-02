@@ -3,7 +3,7 @@
 */
 
 #include "InvertedIndex.h"
-
+#include <stdio.h>
 struct inverted_index {
     List indexes;
     Compare compare;
@@ -99,7 +99,6 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
     dummy->year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
-
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
     if (cur) {
@@ -109,15 +108,15 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
         List std_list = entry->students;
 
         // If the node exists in the index list delete it
-        if (list_find(std_list, student)) 
-            list_delete(std_list, student, true, old_entry);
+        if (list_find(entry->students, student)) 
+            list_delete(entry->students, student, true, old_entry);
     }
 }
 
 List invidx_students_at(InvertedIndex invidx, int year) {
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
-    dummy->year = year;
+    dummy->year = CUR_YEAR - year + 1;
 
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
@@ -126,6 +125,7 @@ List invidx_students_at(InvertedIndex invidx, int year) {
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
+        printf("Size: %d\n", list_len(entry->students));
         return entry->students;
     }
     

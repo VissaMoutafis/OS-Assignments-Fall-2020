@@ -13,7 +13,7 @@ struct listnode {
 struct list {
     ListNode head;
     ListNode tail;
-    size_t count;
+    int count;
     ItemDestructor itemDestructor;
     Compare compare;
 };
@@ -58,7 +58,7 @@ ListNode list_get_head(List list) {
     return list->head;
 }
 
-size_t list_len(List list) {
+int list_len(List list) {
     assert(list);
     return list->count;
 }
@@ -127,6 +127,7 @@ bool list_delete(List list, Pointer entry,  bool delete_entry, Pointer *old_entr
     
     ListNode node = list_find(list, entry);
     if (node) {
+        list->count--;
         *old_entry = delete_entry == false ? list_node_get_entry(list, node) : NULL;
         ListNode prev, next;
         prev = node->prev;
@@ -150,9 +151,6 @@ bool list_delete(List list, Pointer entry,  bool delete_entry, Pointer *old_entr
                 list->itemDestructor(node->entry);
         }
         free(node);
-
-        list->count --;
-        assert(list->count >= 0); // debug line
         return true;
     }
     
@@ -166,10 +164,8 @@ void list_set_destructor(List list, ItemDestructor itemDestructor) {
     list->itemDestructor = itemDestructor;
 }
 
-// Return the
 ItemDestructor list_get_destructor(List list) {
-    assert(list);
-    return list->itemDestructor;
+    return list ? list->itemDestructor : NULL;
 }
 
 // De-allocate the memory allocated for the list.
@@ -210,4 +206,63 @@ void list_node_set_entry(List list, ListNode node, Pointer new_entry, Pointer *o
     assert(old_entry);
     *old_entry = node->entry;
     node->entry = new_entry;
+}
+
+// Additional-Extra Methods
+
+void list_print(List list, Visit visit) {
+    ListNode cur = list->head;
+
+    while (cur != LIST_EOF) {
+        visit(cur->entry);
+    }
+}
+
+Pointer list_find_max(List list, Compare compare) {
+    ListNode n = list->head;
+    Pointer cur, max;
+    max = n->entry;
+
+    while (n != LIST_EOF) {
+        cur = n->entry;
+        max = compare(cur, max) > 0 ? cur : max;
+    }
+
+    return max;
+}
+
+void list_insert_sorted(List list, Pointer entry, Compare compare) {
+    ListNode c = list->head; 
+    
+    while (c != LIST_EOF && compare(c->entry, entry) >= 0) {
+        // while c is in the list and the c->entry > entry
+        c = c->next;
+    }
+    // c will be the node that is next to the new entry node
+    ListNode new_node = create_node(entry, c, NULL);
+
+    if (c == list->head)
+        list->head = new_node;
+
+    if (c != NULL){ 
+        new_node->prev = c->prev;
+        c->prev = new_node;
+        if (c->prev)
+            c->prev->next = new_node;
+    } else {
+        list->tail = new_node;
+    }
+}
+
+List list_get_top_n(List list, Compare compare, int n) {
+    ListNode cur= list->head;
+    
+    List top_n_th = list_create(list->compare, list->itemDestructor);
+    // while we reach the n_th top or the list ends
+    while(n > 0 && cur != LIST_EOF) {
+            list_insert_sorted(top_n_th, cur->entry, compare);
+            cur = cur->next;
+            n--;
+    }
+    return top_n_th;
 }

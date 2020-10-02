@@ -10,16 +10,16 @@ CFLAGS += -I$(INCLUDE) -Wall -g3 -Ofast
 
 OBJS = mngstd.o
 
-ARGS = -i input.txt
+ARGS = -i ./testcases/input1.csv
 
 include $(MODULES)/modules.inc
 
 $(PROGRAM) : $(OBJS) 
-	$(CC) $(CFLAGS) $(OBJS) -o $(PROGRAM)
+	$(CC) $(CFLAGS) $(OBJS) -o $(PROGRAM) 
 
 .PHONY clean :
 	rm -rf $(PROGRAM) $(OBJS)
 
-run : $(PROGRAM)
-	./$(PROGRAM)
+run : $(PROGRAM) 
+	./$(PROGRAM) $(ARGS)
 

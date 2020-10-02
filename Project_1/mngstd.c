@@ -11,8 +11,10 @@ int student_compare(Pointer s1, Pointer s2);    // students comparison function
 void student_destructor(Pointer s);             // student destruction function
 size_t student_hash(Pointer s);                 // student hashing function
 void student_visit(Pointer s);                  // student printing function
+int std_gpa_compare(Pointer s1, Pointer s2);    // student gpa comparison function
 
 /// Utility Functions
+
 Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa, bool deep_copy) {
     Student s = malloc(sizeof(*s));
 
@@ -45,6 +47,21 @@ Pointer create_std(char *student_id, char *last_name, char *first_name , char *p
     return s;
 }
 
+static void insert_student(ManageStudents manager, char **data_table) {
+    // create the student instance and add it in the structs
+    Student std = create_std(data_table[0],
+                             data_table[1],
+                             data_table[2],
+                             data_table[3],
+                             strtol(data_table[4], NULL, 10),
+                             strtof(data_table[5], NULL), false);
+
+    // Insert the student record in the structs
+    ht_insert(manager->students, std);
+    invidx_insert(manager->year_of_study_idx, std);
+    printf("> Student '%s' inserted.\n", data_table[0]);
+}
+
 void initialize_with(char* filename, ManageStudents mngstd) {
     // open the file
 
@@ -57,21 +74,13 @@ void initialize_with(char* filename, ManageStudents mngstd) {
             // take the data string from the file and turn it to a data table
             char* data_str = make_str(&fin);
             int data_cols;
-            char** data_table = parse_line(data_str, &data_cols, ",");
-
-            // create the student instance and add it in the structs
-            Student std = create_std(data_table[0], 
-                                    data_table[1], 
-                                    data_table[2], 
-                                    data_table[3], 
-                                    strtol(data_table[4], NULL, 10), 
-                                    strtof(data_table[5], NULL), false);
-            ht_insert(mngstd->students, std);
-            invidx_insert(mngstd->year_of_study_idx, std);
+            char** data_table = parse_line(data_str, &data_cols, " ");          
+            // insert it 
+            insert_student(mngstd, data_table);
 
             // free the memory of helper variables
             free(data_str);
-            free(data_str);
+            free(data_table);
         }
 
         // number of insert = number of students = lines of the file
@@ -79,11 +88,12 @@ void initialize_with(char* filename, ManageStudents mngstd) {
     
     } else {
         // error message
-        printf("Warning: Cannot Open File with path'%s'\n", filename);
+        printf("> Warning: Cannot Open File with path'%s'\n", filename);
     }
 }
 int get_restistrants_at(InvertedIndex invidx, int year) {
     List student_list = invidx_students_at(invidx, year);
+    printf("%d -> %d\n", year, list_len(student_list));
     return student_list != NULL ? list_len(student_list) : 0;
 }
 
@@ -115,36 +125,37 @@ void mngstd_destroy(ManageStudents manager) {
 }
 
 
-
 void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     if (expr_index == 0) {
         // command: insert, value: student data
         int cols;
         char **data_table = parse_line(value, &cols, " ");
-        // REMEMBER TO FIND A WAY TO FILL INCOMPLETE ENTRIES
+        Student dummy = create_std(data_table[0], NULL, NULL, NULL, 0, 0.0, true);
+        Pointer entry;
+        if (!ht_contains(manager->students, dummy, &entry)){    
+            // REMEMBER TO FIND A WAY TO FILL INCOMPLETE ENTRIES
+            insert_student(manager, data_table);
+        } else {
+            printf("> Student '%s' already exists.\n", data_table[0]);
+            
+            for (int i = 0; i < cols; i++)
+                free(data_table[i]);
 
-        // create the student instance and add it in the structs
-        Student std = create_std(data_table[0],
-                                 data_table[1],
-                                 data_table[2],
-                                 data_table[3],
-                                 strtol(data_table[4], NULL, 10),
-                                 strtof(data_table[5], NULL), false);
-
-        // Insert the student record in the structs
-        ht_insert(manager->students, std);
-        invidx_insert(manager->year_of_study_idx, std);
-
+            free(data_table);
+        }
+        
+        student_destructor(dummy);
     } else if (expr_index == 1) {
         // command: look-up in ht, value: stuednt_id
         Pointer s;
         Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
         if (ht_contains(manager->students, dummy, &s)) {
             Student std = (Student)s;
-            printf("> Student Info :\n");
+            printf("> Student Info : ");
             student_visit(std);
+            printf("\n");
         } else {
-            printf("> The student with student id : '%s' does not exist in the records.\n", value);
+            printf("> Student '%s' does not exist.\n", value);
         }
         student_destructor(dummy);
     
@@ -153,34 +164,43 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
         Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
         Pointer s;
         if (ht_contains(manager->students, dummy, &s)) {
-            // delete it first from the index
+            // delete it first from the index:
+            // a fix because in inverted index you look based on year
+            dummy->year_of_registration = ((Student)s)->year_of_registration; 
             invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+            
             // now delete it from the hash table to delete it normally
             ht_delete(manager->students, dummy, true, &s);
+            printf("> Student %s deleted.\n", value);
+        } else {
+            printf("> Student %s does not exist.\n", value);
         }
 
         student_destructor(dummy);
     
     } else if (expr_index == 3) {
         // command: number of restistrants, value: alpharethmetic for the year
+        int students = 0;
         if (is_numeric(value)) {
             int year = strtol(value, NULL, 10);
-
+            students = get_restistrants_at(manager->year_of_study_idx, year);
             // made up function to query the number of registrants in a year
-            int students = get_restistrants_at(manager->year_of_study_idx, year); // To be implemented
-            printf("> The number of students at year of study %d, is %d", year, students);
+            printf("> %d student(s) in year %s.\n", students, value);
         } else {
-            printf("The year must be a numeric value.\n");
+            printf("> No students enrolled in %s.\n", value);
         }    
 
     } else if (expr_index == 4) {
         // command: top n-th students, value: n year
         int cols;
         char ** data = parse_line(value, &cols, " ");
-        if (cols < 3) {
-            // find the top n students some how
+        if (cols == 2 && is_numeric(data[0]) && is_numeric(data[1])) {
+            int n = strtol(data[0], NULL, 10), year = strtol(data[1], NULL, 10);
+            List student_list = invidx_students_at(manager->year_of_study_idx, year); // returns the invidx entry so dont destroy it
+            List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);
+            list_print(top_n_th, student_visit);
         } else {
-            printf("Too many arguments.\n");
+            printf("False arguments.\n");
             help();
         }
 
@@ -206,6 +226,15 @@ int student_compare(Pointer s1, Pointer s2) {
     return strcmp(std1->student_id, std2->student_id);
 }
 
+int std_gpa_compare(Pointer s1, Pointer s2) {
+    Student std1 = (Student)s1, std2 = (Student)s2;
+    if (std1->gpa > std2->gpa)
+        return 1;
+    else if(std1->gpa < std2->gpa)
+        return -1;
+    
+    return 0;
+}
 void student_destructor(Pointer s) {
     Student std = (Student)s;
     if (std->first_name) free(std->first_name);
@@ -233,10 +262,7 @@ size_t student_hash(Pointer s) {
 
 void student_visit(Pointer s) {
     Student std = (Student)s;
-    printf("\n--------------------------------------------\nStudent Id: %s,\
-     Name: %s, Surname: %s, Postal Code: %s,\
-     Year of Registration: %d, GPA: %.2f\
-     \n--------------------------------------------\n",
+    printf("%s %s %s %s %d %.2f\n",
            std->student_id, std->first_name, 
            std->last_name, std->postal, 
            std->year_of_registration, std->gpa);
