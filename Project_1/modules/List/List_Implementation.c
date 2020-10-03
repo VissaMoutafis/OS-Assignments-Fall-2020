@@ -222,6 +222,20 @@ void list_print(List list, Visit visit) {
     }
 }
 
+Pointer list_find_min(List list, Compare compare) {
+    ListNode n = list->head;
+    Pointer cur, min;
+    min = n->entry;
+
+    while (n != LIST_EOF) {
+        cur = n->entry;
+        min = compare(cur, min) < 0 ? cur : min;
+        n = n->next;
+    }
+
+    return min;
+}
+
 Pointer list_find_max(List list, Compare compare) {
     ListNode n = list->head;
     Pointer cur, max;
