@@ -137,7 +137,7 @@ void initialize_with(char* filename, ManageStudents mngstd) {
     fclose(fin);
 }
 
-static int get_restistrants_at(InvertedIndex invidx, int year) {
+static int get_registrants_at(InvertedIndex invidx, int year) {
     List student_list = invidx_students_at(invidx, year);
     return student_list != NULL ? list_len(student_list) : 0;
 }
@@ -145,18 +145,28 @@ static int get_restistrants_at(InvertedIndex invidx, int year) {
 int zip_counts_compare(Pointer zip1, Pointer zip2) {
     return ((ZipCount)zip1)->count - ((ZipCount)zip2)->count;
 }
+// src list, dest list = sorted, according to compare function
+static List get_sorted_list(List list, List dest_sorted, Compare compare) {
+    assert(list);
+    assert(dest_sorted);
+
+    ListNode cur = list_get_head(list);
+    
+    // Insert everything into dest_sorted list
+    while (cur != LIST_EOF) {
+        Pointer entry = list_node_get_entry(list, cur);
+        list_insert_sorted(dest_sorted, entry, compare); // insert based on the popularity
+        cur = list_get_next(list, cur); // traverse to the next node
+    }
+}
+
 // returns the rank-th postal code(s) in a list. If there aren'e any return NULL. 
 static List get_rankth_zip(List zip_codes, int rank) {
     // NOTE: !Be careful! We play around using *delegating* pointer. It needs concern.
     List sorted_zips = list_create(zip_code_compare, NULL); // dont delete the ZipCount instances
-    ListNode cur = list_get_head(zip_codes);
-    
-    // Insert everything into sorted list
-    while (cur != LIST_EOF) {
-        Pointer entry = list_node_get_entry(zip_codes, cur);
-        list_insert_sorted(sorted_zips, entry, zip_counts_compare); // insert based on the popularity
-        cur = list_get_next(zip_codes, cur); // traverse to the next node
-    }
+
+    // get the sorted list
+    get_sorted_list(zip_codes, sorted_zips, zip_counts_compare);
 
     // we will find the head and tail of the rank-th zips in the sorted list 
     List rank_th_zips = list_create(zip_code_compare, NULL); // we don't want to mess with the ZipCount instances neither create new ones (memory recyclement)
@@ -210,20 +220,45 @@ static float avg_gpa(List std_list) {
     return (float) (sum/((float)list_len(std_list)));
 }
 
-static float min_gpa(List std_list) {
-    ListNode n = list_get_head(std_list);
+// returns min gpa student list, otherwise returns NULL
+static List min_gpa_students(List std_list) {
+    // Note: Be carefull to not de allocate the memory of the student structs
+    // we will use it as it is to save some space and we will isolate this process in the function so the user
+    // won't have to know where the pointers point to.
+    
+    if (!std_list) return NULL;
+    
+    List sorted = list_create(student_compare, NULL); // NULL destructor to clean only the list nodes 
+    get_sorted_list(std_list, sorted, std_gpa_compare); // get the sorted version of the student list
+    List min_students = list_create(student_compare, NULL);
 
-    // set the min gpa as the gpa of the first student in the list
-    float min = n != NULL ? ((Student)list_node_get_entry(std_list, n))->gpa : -1.0;
+    ListNode tail = list_get_tail(sorted); // the tail of the sorted list is the min node
+    
+    if (tail) {
+        ListNode head = tail;
+        Pointer min_val = list_node_get_entry(sorted, tail);
 
-    while(n) {
-        Pointer e = (Student)list_node_get_entry(std_list,n);
-        float cur_gpa = ((Student)e)->gpa;
-        min = cur_gpa < min ? cur_gpa : min;
-        n = list_get_next(std_list, n);
+        // traverse back to the very first node in the list order that has the same gpa as the min_gpa node
+        while(head && std_gpa_compare(min_val, list_node_get_entry(sorted, head)) == 0) {
+            head = list_get_prev(sorted, head);
+        }
+        // at this point head->next points to the first student of the min list
+        head = list_get_next(sorted, head);
+
+        while (head) {
+            Pointer student = list_node_get_entry(sorted, head);
+            list_insert(min_students, student, true);
+            head = list_get_next(sorted, head);
+        }
+    
+    } else {
+        list_destroy(&min_students);
+        min_students = NULL;
     }
 
-    return min;
+    list_destroy(&sorted);
+
+    return min_students;
 }
 
 // Manage Student D.S.
@@ -316,11 +351,11 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     
     } else if (expr_index == 3) {
         //NEEDS FIXING IS WRONG
-        // command: number of restistrants, value: alpharethmetic for the year
+        // command: number of registrants, value: alpharethmetic for the year
         int students = 0;
         if (is_numeric(value)) {
             int year = strtol(value, NULL, 10);
-            students = get_restistrants_at(manager->year_of_study_idx, year);
+            students = get_registrants_at(manager->year_of_study_idx, year);
             // made up function to query the number of registrants in a year
             printf("> %d student(s) in year %s.\n", students, value);
         } else {
@@ -375,7 +410,11 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             // get the list check if empty
             List std_list = invidx_students_at(manager->year_of_study_idx, year);
             if (std_list && list_len(std_list) > 0) {
-                printf("> Min GPA for %s : %.2f\n", value, min_gpa(std_list));
+                List min_gpa_std_list = min_gpa_students(std_list); // return the list of the students with the minimum gpa
+                printf("> ");
+                list_print(min_gpa_std_list, student_visit);
+                printf("\n");
+                list_destroy(&min_gpa_std_list);
             } else {
                 printf("> No students enrolled in %s\n", value);
             }

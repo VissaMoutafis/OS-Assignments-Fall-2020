@@ -10,7 +10,7 @@ CFLAGS += -I$(INCLUDE) -Wall -g3
 
 OBJS = mngstd.o
 
-ARGS = -i ./testcases/input1.csv
+ARGS = -i ./testcases/input2.csv
 
 include $(MODULES)/modules.inc
 

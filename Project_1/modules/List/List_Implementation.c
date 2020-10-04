@@ -57,10 +57,22 @@ ListNode list_get_head(List list) {
     assert(list);
     return list->head;
 }
+
+ListNode list_get_tail(List list) {
+    assert(list);
+    return list->tail;
+}
+
 ListNode list_get_next(List list, ListNode node) {
     assert(list);
     return node ? node->next : NULL;
 }
+
+ListNode list_get_prev(List list, ListNode node) {
+    assert(list);
+    return node ? node->prev : NULL;
+}
+
 int list_len(List list) {
     assert(list);
     return list->count;

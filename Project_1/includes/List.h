@@ -21,6 +21,9 @@ int list_len(List list);
 // Get the first entry of the list
 ListNode list_get_head(List list);
 
+// Get the last entry of the list
+ListNode list_get_tail(List list);
+
 // Finds the node and returns it, otherwise returns NULL.
 ListNode list_find(List list, Pointer entry);
 
@@ -44,6 +47,8 @@ void list_destroy(List *list);
 
 // get the next node
 ListNode list_get_next(List list, ListNode node);
+
+ListNode list_get_prev(List list, ListNode node);
 
 // Getter for the node entry
 Pointer list_node_get_entry(List list, ListNode node);
