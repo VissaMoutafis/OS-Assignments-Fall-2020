@@ -11,6 +11,11 @@ typedef struct zip_code_count {
     int count;
 } *ZipCount;
 
+typedef struct count_per_year {
+    int year;
+    int count;
+}* CountPerYear;
+
 // Function Declarations
 int student_compare(Pointer s1, Pointer s2);    // students comparison function
 void student_destructor(Pointer s);             // student destruction function
@@ -19,9 +24,11 @@ void student_visit(Pointer s);                  // student printing function
 int std_gpa_compare(Pointer s1, Pointer s2);    // student gpa comparison function
 int zip_code_compare(Pointer zip1, Pointer zip2);// zip code compare function
 void zip_code_destructor(Pointer zip);           // zip code struct destructor
-void zip_code_print(Pointer zip);               // zip code struct visit function
-
-/// Utility Functions
+void zip_code_print(Pointer zip);                // zip code struct visit function
+void destroy_count_year_pair(Pointer pair);      // pair destructor
+void print_count_year_pair(Pointer pair);        // pair visit function
+int compare_count_year_pair(Pointer pair1, Pointer pair2); // pair compare function 
+/// Utility Functions   
 
 Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa, bool deep_copy) {
     Student s = malloc(sizeof(*s));
@@ -261,6 +268,34 @@ static List min_gpa_students(List std_list) {
     return min_students;
 }
 
+Pointer create_count_year_pair(int year, int count, bool deep_copy) {
+    CountPerYear pair = malloc(sizeof(*pair));
+    pair->year = year;
+    pair->count = count;
+
+    return pair;
+}
+// simple function that returns all the years and their student counts from the inverted index
+static List get_students_per_year(InvertedIndex index) {
+    if (!index) return NULL;
+
+    List std_per_year = invidx_to_list(index);
+    List pairs = list_create(compare_count_year_pair, destroy_count_year_pair);
+    // we must now traverse the list and get 2 things: the year and the student list length
+    ListNode cur = list_get_head(std_per_year);
+
+    while (cur) {
+        Index index = (Index)list_node_get_entry(std_per_year, cur);
+        int year = index_get_year(index);
+        int count = list_len(index_get_list(index)); 
+        CountPerYear pair = create_count_year_pair(year, count, true);
+        list_insert(pairs, pair, true);
+        cur = list_get_next(std_per_year, cur);
+    }
+
+    return pairs;
+}
+
 // Manage Student D.S.
 
 // constructor
@@ -293,6 +328,8 @@ void mngstd_destroy(ManageStudents manager) {
 void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     if (expr_index == 0) {
         // command: insert, value: student data
+        if (!value) {help(); return;}
+        
         int cols;
         char **data_table = parse_line(value, &cols, " ");
         Student dummy = create_std(data_table[0], NULL, NULL, NULL, 0, 0.0, true);
@@ -312,6 +349,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
         free(data_table);
     } else if (expr_index == 1) {
         // command: look-up in ht, value: stuednt_id
+        if (!value) {help(); return;}
+        
         Pointer s;
         Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
         if (ht_contains(manager->students, dummy, &s)) {
@@ -326,6 +365,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
     
     } else if (expr_index == 2) {
         // command: delete, value: student id
+        if (!value) {help(); return;}
+        
         Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
         Pointer s;
         if (ht_contains(manager->students, dummy, &s)) {
@@ -350,8 +391,9 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
         student_destructor(dummy);
     
     } else if (expr_index == 3) {
-        //NEEDS FIXING IS WRONG
         // command: number of registrants, value: alpharethmetic for the year
+        if (!value) {help(); return;}
+        
         int students = 0;
         if (is_numeric(value)) {
             int year = strtol(value, NULL, 10);
@@ -364,6 +406,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
 
     } else if (expr_index == 4) {
         // command: top n-th students, value: n year
+        if (!value) {help(); return;}
+        
         int cols;
         char ** data = parse_line(value, &cols, " ");
 
@@ -391,6 +435,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
 
     } else if (expr_index == 5) {
         // command: avg, value: year
+        if (!value) {help(); return;}
+        
         if (is_numeric(value)) {
             int year = strtol(value, NULL, 10);
             // get the list check if empty
@@ -405,6 +451,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
         }
     } else if (expr_index == 6) {
         // command: min, value: year
+        if (!value) {help(); return;}
+        
         if (is_numeric(value)) {
             int year = strtol(value, NULL, 10);
             // get the list check if empty
@@ -421,8 +469,23 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
         } else {
             printf("> No students enrolled in %s\n", value);
         }
-    } else if (expr_index == 7) {
 
+    } else if (expr_index == 7) {
+        // command: count (students per year), value = (null)
+        if (!value) {
+            List index_list = invidx_to_list(manager->year_of_study_idx);
+            if (index_list && list_len(index_list) > 0) {
+                List students_per_year = get_students_per_year(manager->year_of_study_idx);
+                printf("> ");
+                list_print(students_per_year, print_count_year_pair);
+                printf("\n");
+                list_destroy(&students_per_year);
+            } else {
+                printf("> No students are enrolled.\n");
+            }
+        } else {
+            help();
+        }
     } else if (expr_index == 8) {
         // command: postal, value: rank
         // we must find the rank-th most popular zip code 
@@ -498,6 +561,11 @@ void student_visit(Pointer s) {
            std->year_of_registration, std->gpa);
 }
 
+void print_student_id(Pointer s) {
+    Student std = (Student)s;
+    printf("%s ", std->student_id);
+}
+
 int zip_code_compare(Pointer zip1, Pointer zip2) {  
     ZipCount z1 = (ZipCount)zip1;
     ZipCount z2 = (ZipCount)zip2;
@@ -513,6 +581,20 @@ void zip_code_print(Pointer zip) {
     printf("%s ", z->postal_code);
 }
 
+int compare_count_year_pair(Pointer pair1, Pointer pair2) {
+    CountPerYear p1 = (CountPerYear) pair1;
+    CountPerYear p2 = (CountPerYear) pair2;
+    return p1->year - p2->year;
+}
+
+void destroy_count_year_pair(Pointer pair) {
+    free(pair);
+} 
+ 
+void print_count_year_pair(Pointer pair) {
+    CountPerYear p = (CountPerYear)pair;
+    printf("{%d, %d} ",CUR_YEAR - p->year + 1, p->count);
+}
 
 int main(int argc, char **argv) {
     // the main logic of the menu is the following:
@@ -547,10 +629,10 @@ int main(int argc, char **argv) {
         else
             help();
 
-        free(expr);
-        free(parsed_cmd[0]);
-        free(parsed_cmd[1]);
-        free(parsed_cmd);
+        if(expr)free(expr);
+        if(parsed_cmd[0]) free(parsed_cmd[0]);
+        if(parsed_cmd[1]) free(parsed_cmd[1]);
+        if(parsed_cmd) free(parsed_cmd);
     }
 
     // de-allocate the memory

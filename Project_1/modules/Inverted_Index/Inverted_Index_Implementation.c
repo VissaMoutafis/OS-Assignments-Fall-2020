@@ -51,6 +51,10 @@ InvertedIndex invidx_create( Compare compare, ItemDestructor itemDestructor) {
     return invidx;
 }
 
+List invidx_to_list(InvertedIndex invidx) {
+    assert(invidx);
+    return invidx->indexes;
+}
 // Simple student insertion function
 void invidx_insert(InvertedIndex invidx, Pointer student) {
     assert(invidx);
@@ -141,4 +145,12 @@ void invidx_destroy(InvertedIndex invidx) {
 
     // now free the whole struct
     free(invidx);
+}
+
+// INDEX METHODS
+int index_get_year(Index index) {
+    return index ? index->year : -1;
+}
+List index_get_list(Index index) {
+    return index ? index->students : NULL;
 }
