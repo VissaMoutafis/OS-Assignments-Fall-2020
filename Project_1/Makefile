@@ -8,9 +8,9 @@ MODULES = ./modules
 
 CFLAGS += -I$(INCLUDE) -Wall -g3
 
-OBJS = mngstd.o main.o struct_manipulation.o
+OBJS = main.o 
 
-ARGS = -i ./testcases/input2.csv
+ARGS = -i ./testcases/input2.csv 
 
 include $(MODULES)/modules.inc
 

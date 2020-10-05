@@ -4,7 +4,10 @@
 #include <assert.h>
 
 
-#define CUR_YEAR 2020
+// THIS FILE CONTAINS SOME BASIC AND FUNDAMENTAL TYPEDEFS
+// THAT HELP WITH THE OVERALL ABSTRACTION LEVELING OF THE PROJECT
+int cur_year;
+bool cnfg;
 
 typedef void *Pointer; //We will use the Pointer notation for Item and/or Key type
 

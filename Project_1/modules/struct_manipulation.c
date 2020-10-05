@@ -117,6 +117,14 @@ void zip_code_print(Pointer zip) {
     printf("%s ", z->postal_code);
 }
 
+Pointer create_count_year_pair(int year, int count, bool deep_copy) {
+    CountPerYear pair = malloc(sizeof(*pair));
+    pair->year = year;
+    pair->count = count;
+
+    return pair;
+}
+
 int compare_count_year_pair(Pointer pair1, Pointer pair2) {
     CountPerYear p1 = (CountPerYear) pair1;
     CountPerYear p2 = (CountPerYear) pair2;
@@ -129,5 +137,5 @@ void destroy_count_year_pair(Pointer pair) {
  
 void print_count_year_pair(Pointer pair) {
     CountPerYear p = (CountPerYear)pair;
-    printf("{%d, %d} ",CUR_YEAR - p->year + 1, p->count);
+    printf("{%d, %d} ",cur_year - p->year + 1, p->count);
 }

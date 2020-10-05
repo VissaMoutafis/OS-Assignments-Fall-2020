@@ -29,6 +29,7 @@ Pointer create_zip_count(char *zip, int count, bool deep_copy); // constructor
 int zip_code_compare(Pointer zip1, Pointer zip2);          // zip code compare function
 void zip_code_destructor(Pointer zip);                     // zip code struct destructor
 void zip_code_print(Pointer zip);                          // zip code struct visit function
+Pointer create_count_year_pair(int year, int count, bool deep_copy); // constructor
 void destroy_count_year_pair(Pointer pair);                // pair destructor
 void print_count_year_pair(Pointer pair);                  // pair visit function
 int compare_count_year_pair(Pointer pair1, Pointer pair2); // pair compare function

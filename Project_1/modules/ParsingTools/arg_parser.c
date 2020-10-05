@@ -1,5 +1,5 @@
 #include "ParsingUtils.h"
-
+#include "HT.h"
 void error_handle(char **a) {
     // wrong input
     // first free the memory
@@ -27,7 +27,7 @@ void error_too_many_args(void) {
 // parsing or not.
 // Also we will pass a pointer to a string-array so that
 // the user gets the input values in some way
-bool args_parser(int argc, char **argv, char ***input, int *input_size) {
+void args_parser(int argc, char **argv, char ***input, int *input_size) {
     
     // Basic constraints :
     // 1. the input values must be at most 4 + 1(the program name) values, 7 in total
@@ -56,27 +56,41 @@ bool args_parser(int argc, char **argv, char ***input, int *input_size) {
             {
                 error_false_arg();
                 error_handle(*input);
-
-                //return false to the caller
-                return false;
+                exit(EXIT_FAILURE);
             }
         }
-        //everything went good return true
-        return true;
+        
+    } else {
+        error_too_many_args();
+        error_handle(NULL);
+        exit(EXIT_FAILURE);
     }
-    error_too_many_args();
-    error_handle(NULL);    
-    return false;
+    
 }
-
-// test main
-// int main(int argc, char **argv) {
-//     int input_size;
-//     char** input;
-//     bool s = args_parser(argc, argv, &input, &input_size);
-//     if (input_size == 0) printf("No Args\n");
-//     for (int i=0; s && i<input_size; ++i) {
-//         printf("Argument #%d : %s\n", i, input[i]);
-//     }
-//     return 0;
-// }
+void parse_cnfg(char* filename) {
+    FILE* fin = filename ? fopen(filename, "r"): NULL;
+    if (fin) {
+        // the first line is the current year and the second one is the config hashtable size
+        for (int i = 0; i < 2; ++i) {
+            char* str = make_str(&fin);
+            if (is_numeric(str)) {
+                switch (i) {
+                case 0:
+                    // set the current year
+                    cur_year = strtol(str, NULL, 10);
+                    break;
+                case 1:
+                // set the hashtable size
+                    config_size = strtol(str, NULL, 10);
+                }
+            } else {
+                printf("'%s' is not a numeric value.\n", str);
+            } 
+            free(str);
+        }
+        fclose(fin);
+    } else {
+        printf("The file cannot be opened.\n");
+        exit(EXIT_FAILURE);
+    }
+}

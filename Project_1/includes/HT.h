@@ -2,10 +2,9 @@
 
 #include "Types.h"
 #include "List.h"
-#define INITIAL_HT_SIZE 901 // initial (prime int) size of the hash table
 
 typedef struct hashtable* HT;
-
+size_t config_size;
 // Hash Table Methods
 
 // Creates a Hash Table

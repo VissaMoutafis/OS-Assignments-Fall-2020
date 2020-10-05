@@ -309,9 +309,11 @@ List list_get_top_n(List list, Compare compare, int n) {
             ListNode tail = top_n_th->tail;
             if (top_n_th->tail){
                 top_n_th->tail = tail->prev;
-                top_n_th->tail->next = NULL;
-            } else 
-                top_n_th->head = top_n_th->tail;
+                if (top_n_th->tail)
+                    top_n_th->tail->next = NULL;
+            }
+            if (top_n_th->tail == NULL)
+                top_n_th->head = top_n_th->tail = NULL;
             free(tail);
             
         }

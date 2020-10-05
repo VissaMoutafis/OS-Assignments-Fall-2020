@@ -218,13 +218,7 @@ static List min_gpa_students(List std_list) {
     return min_students;
 }
 
-Pointer create_count_year_pair(int year, int count, bool deep_copy) {
-    CountPerYear pair = malloc(sizeof(*pair));
-    pair->year = year;
-    pair->count = count;
 
-    return pair;
-}
 // simple function that returns all the years and their student counts from the inverted index
 static List get_students_per_year(InvertedIndex index) {
     if (!index) return NULL;
@@ -369,7 +363,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
 
             if (cols == 2 && is_numeric(data[0]) && is_numeric(data[1])) {
                 int n = strtol(data[0], NULL, 10), year = strtol(data[1], NULL, 10);
-                
+
                 List student_list = invidx_students_at(manager->year_of_study_idx, year); // returns the invidx entry so dont destroy it
                 if (student_list && list_len(student_list) > 0) {
                     List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);

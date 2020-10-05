@@ -61,8 +61,8 @@ void invidx_insert(InvertedIndex invidx, Pointer student) {
     assert(student);
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
-    dummy->year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
-    int year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
+    dummy->year = (cur_year - ((Student)student)->year_of_registration) + 1;
+    int year = (cur_year - ((Student)student)->year_of_registration) + 1;
 
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
@@ -103,7 +103,7 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
 
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
-    dummy->year = (CUR_YEAR - ((Student)student)->year_of_registration) + 1;
+    dummy->year = (cur_year - ((Student)student)->year_of_registration) + 1;
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
     free(dummy);
@@ -122,7 +122,7 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
 List invidx_students_at(InvertedIndex invidx, int year) {
     // dummy entry for search
     Index dummy = malloc(sizeof(*dummy));
-    dummy->year = CUR_YEAR - year + 1;
+    dummy->year = cur_year - year + 1;
 
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);

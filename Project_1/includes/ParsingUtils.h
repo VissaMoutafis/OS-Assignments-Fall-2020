@@ -11,4 +11,5 @@ char **parse_line(char *data_str, int *columns, char* sep);
 bool is_numeric(char* str);
 
 // arg parsing
-bool args_parser(int argc, char **argv, char ***input, int *input_size);
+void args_parser(int argc, char **argv, char ***input, int *input_size);
+void parse_cnfg(char* filename); // parse config file

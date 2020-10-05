@@ -10,7 +10,10 @@ int main(int argc, char **argv) {
     char **arguments;
     int size;
     args_parser(argc, argv, &arguments, &size); // Something must be done for the configurations
-    
+    if (size == 2) {
+        cnfg = true;
+        parse_cnfg(arguments[1]);
+    }
     // Initiaze the struct
     ManageStudents manager = mngstd_create(student_compare, student_destructor, student_hash, arguments[0]);
     // turn the is_end pointer to false

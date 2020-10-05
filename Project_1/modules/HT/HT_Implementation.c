@@ -82,7 +82,8 @@ HT ht_create(Compare compare, Hash_Func hash_func, ItemDestructor itemDestructor
     ht->hash = hash_func;
     ht->compare = compare;
     ht->itemDestructor = itemDestructor;
-    ht->size = max_entries > 0 ? calculate_ht_size(max_entries) : INITIAL_HT_SIZE;  //make sure that the size is a positive integer large enough
+    ht->size = !cnfg ? calculate_ht_size(max_entries) : config_size; // check if a configuration file is included
+
     ht->item_count = 0;
 
     // The table will be a 1-D array of Pointer* ( aka (void*)* )
