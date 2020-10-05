@@ -87,7 +87,7 @@ char **parse_expression(char * expr) {
         value = calloc(strlen(expr) - expr_index, sizeof(char));
         // copy the letters (sorry don't know any other function to do that)
         for (unsigned int i = expr_index+1 ; expr[i]; i++)
-        value[i-(expr_index+1)] = expr[i];
+            value[i-(expr_index+1)] = expr[i];
     }
     
     // set the command and value fields
@@ -97,9 +97,3 @@ char **parse_expression(char * expr) {
     // we are done
     return parsed_expr;
 }
-
-
-// int main() {
-//     printf("%s\n",check_format(get_input()) ? "Right" : "Wrong Format");
-//     return 0;
-// }

@@ -8,7 +8,7 @@ MODULES = ./modules
 
 CFLAGS += -I$(INCLUDE) -Wall -g3
 
-OBJS = mngstd.o
+OBJS = mngstd.o main.o struct_manipulation.o
 
 ARGS = -i ./testcases/input2.csv
 

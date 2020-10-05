@@ -6,76 +6,26 @@ struct mngstd {
     List zip_codes_count;               // List for keeping the student-count per zip code
     size_t student_count;               // How many student do I got
 };
-typedef struct zip_code_count {
-    char* postal_code;
-    int count;
-} *ZipCount;
 
-typedef struct count_per_year {
-    int year;
-    int count;
-}* CountPerYear;
+const char *error_expr[9] = {
+    "> Student '%s' already exists.\n",
+    "> Student '%s' does not exist.\n",
+    "> Student %s does not exist.\n",
+    "> No students enrolled in %s.\n",
+    "> No students enrolled in %s.\n",
+    "> No students enrolled in %s\n",
+    "> No students enrolled in %s\n",
+    "> No students are enrolled.\n",
+    "> No students are enrolled.\n"};
 
-// Function Declarations
-int student_compare(Pointer s1, Pointer s2);    // students comparison function
-void student_destructor(Pointer s);             // student destruction function
-size_t student_hash(Pointer s);                 // student hashing function
-void student_visit(Pointer s);                  // student printing function
-int std_gpa_compare(Pointer s1, Pointer s2);    // student gpa comparison function
-int zip_code_compare(Pointer zip1, Pointer zip2);// zip code compare function
-void zip_code_destructor(Pointer zip);           // zip code struct destructor
-void zip_code_print(Pointer zip);                // zip code struct visit function
-void destroy_count_year_pair(Pointer pair);      // pair destructor
-void print_count_year_pair(Pointer pair);        // pair visit function
-int compare_count_year_pair(Pointer pair1, Pointer pair2); // pair compare function 
 /// Utility Functions   
 
-Pointer create_std(char *student_id, char *last_name, char *first_name , char *postal, int year_of_rgstr, float gpa, bool deep_copy) {
-    Student s = malloc(sizeof(*s));
-
-    if (!deep_copy) {
-        // shallow copy
-        s->first_name = first_name;
-        s->last_name = last_name;
-        s->student_id = student_id;
-        s->postal = postal;
-
-    } else {
-        // deep copy
-        s->student_id = student_id ? calloc(strlen(student_id)+1, sizeof(char)) : NULL;
-        if (student_id) strcpy(s->student_id, student_id);
-
-        s->first_name = first_name ? calloc(strlen(first_name)+1, sizeof(char)) : NULL;
-        if (first_name) strcpy(s->first_name, first_name);
-
-        s->last_name = last_name ? calloc(strlen(last_name)+1, sizeof(char)) : NULL;
-        if (last_name) strcpy(s->last_name, last_name);
-
-        s->postal = postal ? calloc(strlen(postal)+1, sizeof(char)) : NULL;
-        if (postal) strcpy(s->postal, postal);
-    }
-
-    // arithmetics are the same in deep and shallow copy
-    s->gpa = gpa;
-    s->year_of_registration = year_of_rgstr;
-
-    return s;
+void print_manager_error(int expr_index, char* value) {
+    if (value) printf(error_expr[expr_index], value);
+    else printf(error_expr[expr_index]);
 }
 
-Pointer create_zip_count(char* zip, int count, bool deep_copy) {
-    ZipCount z = malloc(sizeof(*z));
-    z->count = count;
-    if (deep_copy) {
-        z->postal_code = calloc(strlen(zip)+1, sizeof(char));
-        strcpy(z->postal_code, zip);
-    } else {
-        z->postal_code = zip;
-    }
-
-    return (Pointer)z;
-}
-
-static void insert_student(ManageStudents manager, char **data_table) {
+void insert_student(ManageStudents manager, char **data_table) {
     // create the student instance and add it in the structs
     Student std = create_std(data_table[0],
                              data_table[1],
@@ -135,13 +85,13 @@ void initialize_with(char* filename, ManageStudents mngstd) {
 
         // number of insert = number of students = lines of the file
         mngstd->student_count = lines;
-    
+        fclose(fin);
     } else {
         // error message
         printf("> Warning: Cannot Open File with path'%s'\n", filename);
     }
 
-    fclose(fin);
+    
 }
 
 static int get_registrants_at(InvertedIndex invidx, int year) {
@@ -153,7 +103,7 @@ int zip_counts_compare(Pointer zip1, Pointer zip2) {
     return ((ZipCount)zip1)->count - ((ZipCount)zip2)->count;
 }
 // src list, dest list = sorted, according to compare function
-static List get_sorted_list(List list, List dest_sorted, Compare compare) {
+static void get_sorted_list(List list, List dest_sorted, Compare compare) {
     assert(list);
     assert(dest_sorted);
 
@@ -326,320 +276,203 @@ void mngstd_destroy(ManageStudents manager) {
 
 
 void mngstd_run(ManageStudents manager, int expr_index, char* value) {
-    if (expr_index == 0) {
-        // command: insert, value: student data
-        if (!value) {help(); return;}
-        
-        int cols;
-        char **data_table = parse_line(value, &cols, " ");
-        Student dummy = create_std(data_table[0], NULL, NULL, NULL, 0, 0.0, true);
-        Pointer entry;
-
-        if (!ht_contains(manager->students, dummy, &entry)){    
-            // REMEMBER TO FIND A WAY TO FILL INCOMPLETE ENTRIES
-            insert_student(manager, data_table);
-        } else {
-            printf("> Student '%s' already exists.\n", data_table[0]);
-            
-            for (int i = 0; i < cols; i++)
-                free(data_table[i]);
-        }
-        
-        student_destructor(dummy);
-        free(data_table);
-    } else if (expr_index == 1) {
-        // command: look-up in ht, value: stuednt_id
-        if (!value) {help(); return;}
-        
-        Pointer s;
-        Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
-        if (ht_contains(manager->students, dummy, &s)) {
-            Student std = (Student)s;
-            printf("> Student Info : ");
-            student_visit(std);
-            printf("\n");
-        } else {
-            printf("> Student '%s' does not exist.\n", value);
-        }
-        student_destructor(dummy);
+    int cols;
+    Pointer s;
+    Student dummy;
+    char **data;
     
-    } else if (expr_index == 2) {
-        // command: delete, value: student id
-        if (!value) {help(); return;}
-        
-        Student dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
-        Pointer s;
-        if (ht_contains(manager->students, dummy, &s)) {
-            // Before actual deletion we need to decrease the postal code count
-            ZipCount zip_dummy = create_zip_count(((Student)s)->postal, 0, false);
-            ListNode zip_n = list_find(manager->zip_codes_count, zip_dummy);
-            ZipCount entry = (ZipCount)list_node_get_entry(manager->zip_codes_count, zip_n);
-            entry->count -= 1;
-
-            // Now we are ready: delete it first from the index:
-            // a fix because in inverted index you look based on year
-            dummy->year_of_registration = ((Student)s)->year_of_registration; 
-            invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+    switch(expr_index) {
+        case 0:
+            // command: insert, value: student data
+            if (!value) {help(); return;}
             
-            // now delete it from the hash table to delete it normally
-            ht_delete(manager->students, dummy, true, &s);
-            printf("> Student %s deleted.\n", value);
-        } else {
-            printf("> Student %s does not exist.\n", value);
-        }
+            data = parse_line(value, &cols, " ");
+            dummy = create_std(data[0], NULL, NULL, NULL, 0, 0.0, true);
+            Pointer entry;
 
-        student_destructor(dummy);
-    
-    } else if (expr_index == 3) {
-        // command: number of registrants, value: alpharethmetic for the year
-        if (!value) {help(); return;}
-        
-        int students = 0;
-        if (is_numeric(value)) {
-            int year = strtol(value, NULL, 10);
-            students = get_registrants_at(manager->year_of_study_idx, year);
-            // made up function to query the number of registrants in a year
-            printf("> %d student(s) in year %s.\n", students, value);
-        } else {
-            printf("> No students enrolled in %s.\n", value);
-        }    
-
-    } else if (expr_index == 4) {
-        // command: top n-th students, value: n year
-        if (!value) {help(); return;}
-        
-        int cols;
-        char ** data = parse_line(value, &cols, " ");
-
-        if (cols == 2 && is_numeric(data[0]) && is_numeric(data[1])) {
-            int n = strtol(data[0], NULL, 10), year = strtol(data[1], NULL, 10);
-            
-            List student_list = invidx_students_at(manager->year_of_study_idx, year); // returns the invidx entry so dont destroy it
-            if (student_list && list_len(student_list) > 0) {
-                List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);
-                
-                // print the list
-                list_print(top_n_th, student_visit);
-                // deallocate the memory
-                list_destroy(&top_n_th);
+            if (!ht_contains(manager->students, dummy, &entry)){    
+                insert_student(manager, data);
             } else {
-                printf("> No students enrolled in %s.\n", data[1]);
+                print_manager_error(0, data[0]);
+                for (int i = 0; i < cols; i++)
+                    free(data[i]);
             }
-            for (int i = 0; i < cols; i++)
-                free(data[i]);
+            student_destructor(dummy);
             free(data);
-        } else {
-            printf("> No students enrolled in %s.\n", data[1]);
-        }
-        
-
-    } else if (expr_index == 5) {
-        // command: avg, value: year
-        if (!value) {help(); return;}
-        
-        if (is_numeric(value)) {
-            int year = strtol(value, NULL, 10);
-            // get the list check if empty
-            List std_list = invidx_students_at(manager->year_of_study_idx, year);
-            if (std_list && list_len(std_list) > 0) {
-                printf("> Avg GPA for %s : %.2f\n", value, avg_gpa(std_list));
-            } else {
-                printf("> No students enrolled in %s\n", value);
-            }
-        } else {
-            printf("> No students enrolled in %s\n", value);
-        }
-    } else if (expr_index == 6) {
-        // command: min, value: year
-        if (!value) {help(); return;}
-        
-        if (is_numeric(value)) {
-            int year = strtol(value, NULL, 10);
-            // get the list check if empty
-            List std_list = invidx_students_at(manager->year_of_study_idx, year);
-            if (std_list && list_len(std_list) > 0) {
-                List min_gpa_std_list = min_gpa_students(std_list); // return the list of the students with the minimum gpa
-                printf("> ");
-                list_print(min_gpa_std_list, student_visit);
+        break;
+        case 1:
+            // command: look-up in ht, value: student_id
+            if (!value) {help(); return;}
+            
+            dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
+            if (ht_contains(manager->students, dummy, &s)) {
+                Student std = (Student)s;
+                printf("> Student Info : ");
+                student_visit(std);
                 printf("\n");
-                list_destroy(&min_gpa_std_list);
             } else {
-                printf("> No students enrolled in %s\n", value);
+                print_manager_error(1, value);
             }
-        } else {
-            printf("> No students enrolled in %s\n", value);
-        }
-
-    } else if (expr_index == 7) {
-        // command: count (students per year), value = (null)
-        if (!value) {
-            List index_list = invidx_to_list(manager->year_of_study_idx);
-            if (index_list && list_len(index_list) > 0) {
-                List students_per_year = get_students_per_year(manager->year_of_study_idx);
-                printf("> ");
-                list_print(students_per_year, print_count_year_pair);
-                printf("\n");
-                list_destroy(&students_per_year);
-            } else {
-                printf("> No students are enrolled.\n");
-            }
-        } else {
-            help();
-        }
-    } else if (expr_index == 8) {
-        // command: postal, value: rank
-        // we must find the rank-th most popular zip code 
-        // one approach woul be to keep a list of all post codes and when we insert a student
-        // we will update the according zip code or add it if it does not exist in the list.
-        if (is_numeric(value)) {
-            int rank = strtol(value, NULL, 10); // get the numeric value straight
-            List zip_codes = get_rankth_zip(manager->zip_codes_count, rank);
-            if (zip_codes != NULL) {
-                printf("> ");
-                list_print(zip_codes, zip_code_print);
-                printf(" zip code(s) is/are rank : %s most popular.\n", value);
-                list_destroy(&zip_codes);
-            } else {
-                printf("> No students are enrolled.\n");
-            }
-        } else {
-            help();
-        } 
-    } else if (expr_index == 9) {
-        // command : exit, value = NULL
-        is_end = true;
-        return;
-    } else {
-        help();
-    }
-}
-
-int student_compare(Pointer s1, Pointer s2) {
-    Student std1 = (Student)s1, std2 = (Student)s2;
-    return strcmp(std1->student_id, std2->student_id);
-}
-
-int std_gpa_compare(Pointer s1, Pointer s2) {
-    Student std1 = (Student)s1, std2 = (Student)s2;
-    if (std1->gpa - std2->gpa > 0.0)
-        return 1;
-    else if(std1->gpa - std2->gpa < 0.0)
-        return -1;
-    
-    return 0;
-}
-void student_destructor(Pointer s) {
-    Student std = (Student)s;
-    if (std->first_name) free(std->first_name);
-    if (std->last_name) free(std->last_name);
-    if(std->postal) free(std->postal);
-    if(std->student_id) free(std->student_id);
-    free(s);
-}
-
-size_t student_hash(Pointer s) {
-    Student std = (Student)s;
-    char *str = std->student_id;
-    size_t hashcode = 23;
-    size_t sauce = 0;
-    for (size_t i = 0; str[i] != '\0'; ++i)
-    {
-        size_t l = (size_t)(str[i] - '0');
-        sauce += l;
-        hashcode *= sauce;
-        hashcode += l;
-    }
-
-    return hashcode;
-}
-
-void student_visit(Pointer s) {
-    Student std = (Student)s;
-    printf("%s %s %s %s %d %.2f\n",
-           std->student_id, std->first_name, 
-           std->last_name, std->postal, 
-           std->year_of_registration, std->gpa);
-}
-
-void print_student_id(Pointer s) {
-    Student std = (Student)s;
-    printf("%s ", std->student_id);
-}
-
-int zip_code_compare(Pointer zip1, Pointer zip2) {  
-    ZipCount z1 = (ZipCount)zip1;
-    ZipCount z2 = (ZipCount)zip2;
-    return strcmp(z1->postal_code, z2->postal_code);
-}
-
-void zip_code_destructor(Pointer zip) {
-    // we dont need to destroy the zip->postal_code since it is shallow copied
-    free(zip);
-}
-void zip_code_print(Pointer zip) {
-    ZipCount z = (ZipCount)zip;
-    printf("%s ", z->postal_code);
-}
-
-int compare_count_year_pair(Pointer pair1, Pointer pair2) {
-    CountPerYear p1 = (CountPerYear) pair1;
-    CountPerYear p2 = (CountPerYear) pair2;
-    return p1->year - p2->year;
-}
-
-void destroy_count_year_pair(Pointer pair) {
-    free(pair);
-} 
- 
-void print_count_year_pair(Pointer pair) {
-    CountPerYear p = (CountPerYear)pair;
-    printf("{%d, %d} ",CUR_YEAR - p->year + 1, p->count);
-}
-
-int main(int argc, char **argv) {
-    // the main logic of the menu is the following:
-    // 1. get the input
-    // 2. parse it
-    // 3. give it to the runelection struct to make something out of it
-
-    char **arguments;
-    int size;
-    args_parser(argc, argv, &arguments, &size); // Something must be done for the configurations
-    
-    // Initiaze the struct
-    ManageStudents manager = mngstd_create(student_compare, student_destructor, student_hash, arguments[0]);
-    // turn the is_end pointer to false
-    is_end = false;
-
-    while (manager && !is_end) {
-        // Get the tty expression
-        char *expr = get_input();
-        // Parse the expression
-        char **parsed_cmd = parse_expression(expr); // parse the given experssion (format:~$ command value)
+            student_destructor(dummy);
         
-        // make clean what we are talking about
-        char *command = parsed_cmd[0];
-        char *value = parsed_cmd[1];
-        int expr_index;
+        break;
+        case 2:
+            // command: delete, value: student id
+            if (!value) {help(); return;}
+            
+            dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
+            if (ht_contains(manager->students, dummy, &s)) {
+                // Before actual deletion we need to decrease the postal code count
+                ZipCount zip_dummy = create_zip_count(((Student)s)->postal, 0, false);
+                ListNode zip_n = list_find(manager->zip_codes_count, zip_dummy);
+                ZipCount entry = (ZipCount)list_node_get_entry(manager->zip_codes_count, zip_n);
+                entry->count -= 1;
 
-        // check if the expression is right and 
-        if (check_format(command, &expr_index) == true)
-            mngstd_run(manager, expr_index, value);
-            // printf("The program will run {command: %s, value: %s}\n", parsed_cmd[0], parsed_cmd[1]);
-        else
+                // Now we are ready: delete it first from the index:
+                // a fix because in inverted index you look based on year
+                dummy->year_of_registration = ((Student)s)->year_of_registration; 
+                invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+                
+                // now delete it from the hash table to delete it normally
+                ht_delete(manager->students, dummy, true, &s);
+                printf("> Student %s deleted.\n", value);
+            } else {
+                print_manager_error(2, value);
+            }
+
+            student_destructor(dummy);
+        
+        break;
+        case 3:
+            // command: number of registrants, value: alpharethmetic for the year
+            if (!value) {help(); return;}
+            
+            int students = 0;
+            if (is_numeric(value)) {
+                int year = strtol(value, NULL, 10);
+                students = get_registrants_at(manager->year_of_study_idx, year);
+                // made up function to query the number of registrants in a year
+                if (students)
+                    printf("> %d student(s) in year %s.\n", students, value);
+                else
+                    print_manager_error(3, value);
+            } else {
+                print_manager_error(3, value);
+            }    
+
+        break;
+        case 4:
+            // command: top n-th students, value: n year
+            if (!value) {help(); return;}
+            
+            data = parse_line(value, &cols, " ");
+
+            if (cols == 2 && is_numeric(data[0]) && is_numeric(data[1])) {
+                int n = strtol(data[0], NULL, 10), year = strtol(data[1], NULL, 10);
+                
+                List student_list = invidx_students_at(manager->year_of_study_idx, year); // returns the invidx entry so dont destroy it
+                if (student_list && list_len(student_list) > 0) {
+                    List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);
+                    
+                    // print the list
+                    list_print(top_n_th, student_visit);
+                    // deallocate the memory
+                    list_destroy(&top_n_th);
+                } else {
+                    print_manager_error(4, data[1]);
+                }
+                for (int i = 0; i < cols; i++)
+                    free(data[i]);
+                free(data);
+            } else {
+                print_manager_error(4, data[1]);
+                help();
+            }
+            
+
+        break;
+        case 5:
+            // command: avg, value: year
+            if (!value) {help(); return;}
+            
+            if (is_numeric(value)) {
+                int year = strtol(value, NULL, 10);
+                // get the list check if empty
+                List std_list = invidx_students_at(manager->year_of_study_idx, year);
+                if (std_list && list_len(std_list) > 0) {
+                    printf("> Avg GPA for %s : %.2f\n", value, avg_gpa(std_list));
+                } else {
+                    
+                }
+            } else {
+                print_manager_error(5, value);
+            }
+        break;
+        case 6:
+            // command: min, value: year
+            if (!value) {help(); return;}
+            
+            if (is_numeric(value)) {
+                int year = strtol(value, NULL, 10);
+                // get the list check if empty
+                List std_list = invidx_students_at(manager->year_of_study_idx, year);
+                if (std_list && list_len(std_list) > 0) {
+                    List min_gpa_std_list = min_gpa_students(std_list); // return the list of the students with the minimum gpa
+                    printf("> ");
+                    list_print(min_gpa_std_list, student_visit);
+                    printf("\n");
+                    list_destroy(&min_gpa_std_list);
+                } else {
+                    print_manager_error(6, value);
+                }
+            } else {
+                print_manager_error(6, value);
+            }
+
+        break;
+        case 7:
+            // command: count (students per year), value = (null)
+            if (!value) {
+                List index_list = invidx_to_list(manager->year_of_study_idx);
+                if (index_list && list_len(index_list) > 0) {
+                    List students_per_year = get_students_per_year(manager->year_of_study_idx);
+                    printf("> ");
+                    list_print(students_per_year, print_count_year_pair);
+                    printf("\n");
+                    list_destroy(&students_per_year);
+                } else {
+                    print_manager_error(7, NULL);
+                }
+            } else {
+                help();
+            }
+        break;
+        case 8:
+            // command: postal, value: rank
+            // we must find the rank-th most popular zip code 
+            // one approach woul be to keep a list of all post codes and when we insert a student
+            // we will update the according zip code or add it if it does not exist in the list.
+            if (is_numeric(value)) {
+                int rank = strtol(value, NULL, 10); // get the numeric value straight
+                List zip_codes = get_rankth_zip(manager->zip_codes_count, rank);
+                if (zip_codes != NULL) {
+                    printf("> ");
+                    list_print(zip_codes, zip_code_print);
+                    printf(" zip code(s) is/are rank : %s most popular.\n", value);
+                    list_destroy(&zip_codes);
+                } else {
+                    print_manager_error(8, NULL);
+                }
+            } else {
+                help();
+            }
+        break; 
+        case 9:
+            // command : exit, value = NULL
+            is_end = true;
+            printf("Exiting...\n");
+            return;
+        default:
             help();
-
-        if(expr)free(expr);
-        if(parsed_cmd[0]) free(parsed_cmd[0]);
-        if(parsed_cmd[1]) free(parsed_cmd[1]);
-        if(parsed_cmd) free(parsed_cmd);
     }
-
-    // de-allocate the memory
-    mngstd_destroy(manager);
-
-    for(int i = 0; i < size; ++i) 
-        free(arguments[i]);
-
-    free(arguments);
 }
