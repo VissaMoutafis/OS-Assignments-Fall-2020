@@ -32,7 +32,7 @@ char *possible_commands[10] = {
 
 void print_tty(void) {
     // NOTE: Maybe later add some color
-    printf("<mngstd> ~$ ");
+    printf("\n<mngstd> ~$ ");
 }
 
 void help(void) {
@@ -47,7 +47,6 @@ char *get_input(void) {
 
     print_tty();
     in = make_str(&stdin);
-    printf("\n");
     return in;
 }
 

@@ -1,5 +1,6 @@
 #include "ParsingUtils.h"
 #include "HT.h"
+
 void error_handle(char **a) {
     // wrong input
     // first free the memory
@@ -23,6 +24,18 @@ void error_too_many_args(void) {
     printf("\n- - - Error: Too Many Arguments.\n");
 }
 
+static bool check_val(char* val, char ** args, int arg_size) {
+    // check if the val is not in the argument list
+
+    for(int i = 0; i < arg_size; i ++) {
+        if (strcmp(val, args[i]) == 0) // if the value string is an command line argument
+            return false;
+    }
+
+    // if we reach this point the value string is not in argument list
+    return true;
+}
+
 // The function must return either true or false for successful
 // parsing or not.
 // Also we will pass a pointer to a string-array so that
@@ -44,16 +57,21 @@ void args_parser(int argc, char **argv, char ***input, int *input_size) {
             char *flag = argv[i];
 
             // get a copy of the flag's value
-            char *value = calloc(strlen(argv[i + 1]) + 1, sizeof(char));
-            strcpy(value, argv[i + 1]);
+            char *value = NULL;
+            if (i + 1 < argc) {
+                value = calloc(strlen(argv[i + 1]) + 1, sizeof(char));
+                strcpy(value, argv[i + 1]);
+            }
 
+            // check if there is a missing value (entries like -i -c config where value for '-i' is NULL) 
+            bool check = value != NULL && check_val(value, (char *[2]){"-i", "-c"}, 2);
+                        
             // set the proper field equal to the value
-            if (strcmp(flag, "-i") == 0)
+            if (check && strcmp(flag, "-i") == 0){
                 (*input)[0] = value;
-            else if (strcmp(flag, "-c") == 0)
+            } else if (check && strcmp(flag, "-c") == 0) {
                 (*input)[1] = value;
-            else
-            {
+            } else {
                 error_false_arg();
                 error_handle(*input);
                 exit(EXIT_FAILURE);
@@ -67,6 +85,8 @@ void args_parser(int argc, char **argv, char ***input, int *input_size) {
     }
     
 }
+
+// function to parse the configuration file input
 void parse_cnfg(char* filename) {
     FILE* fin = filename ? fopen(filename, "r"): NULL;
     if (fin) {
@@ -90,7 +110,7 @@ void parse_cnfg(char* filename) {
         }
         fclose(fin);
     } else {
-        printf("The file cannot be opened.\n");
+        printf("The configuration file '%s' cannot be opened.\n", filename);
         exit(EXIT_FAILURE);
     }
 }

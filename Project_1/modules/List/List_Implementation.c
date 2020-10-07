@@ -133,7 +133,6 @@ void list_insert(List list, Pointer entry, bool last) {
         }
     }
     list->count ++;
-    
 }
 
 // Delete a specific entry 

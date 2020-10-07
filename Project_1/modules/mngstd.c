@@ -21,8 +21,7 @@ const char *error_expr[9] = {
 /// Utility Functions   
 
 void print_manager_error(int expr_index, char* value) {
-    if (value) printf(error_expr[expr_index], value);
-    else printf(error_expr[expr_index]);
+    printf(error_expr[expr_index], value);
 }
 
 void insert_student(ManageStudents manager, char **data_table) {
@@ -89,6 +88,7 @@ void initialize_with(char* filename, ManageStudents mngstd) {
     } else {
         // error message
         printf("> Warning: Cannot Open File with path'%s'\n", filename);
+        is_end = true;
     }
 
     
@@ -256,7 +256,8 @@ ManageStudents mngstd_create(Compare std_compare, ItemDestructor std_destructor,
     mngstd->year_of_study_idx = invidx_create(std_compare, NULL);
     mngstd->zip_codes_count = list_create(zip_code_compare, zip_code_destructor);
     // file initialization
-    initialize_with(in_filename, mngstd);
+    if (in_filename)
+        initialize_with(in_filename, mngstd);
 
     return mngstd;
 }
@@ -281,19 +282,27 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             if (!value) {help(); return;}
             
             data = parse_line(value, &cols, " ");
-            dummy = create_std(data[0], NULL, NULL, NULL, 0, 0.0, true);
-            Pointer entry;
 
-            if (!ht_contains(manager->students, dummy, &entry)){    
-                insert_student(manager, data);
+            if (cols == STUDENT_ATR_NUM) {
+                dummy = create_std(data[0], NULL, NULL, NULL, 0, 0.0, true);
+                Pointer entry;
+                if (!ht_contains(manager->students, dummy, &entry)){    
+                    insert_student(manager, data);
+                } else {
+                    print_manager_error(0, data[0]);
+                    for (int i = 0; i < cols; i++)
+                        free(data[i]);
+                }
+                student_destructor(dummy);
             } else {
-                print_manager_error(0, data[0]);
-                for (int i = 0; i < cols; i++)
-                    free(data[i]);
+                printf("> False number of Student attributes.\n");
+                help();
+                for (int i = 0; i < cols; i++) if (data[i]) free(data[i]);
             }
-            student_destructor(dummy);
+            
             free(data);
         break;
+
         case 1:
             // command: look-up in ht, value: student_id
             if (!value) {help(); return;}
@@ -310,6 +319,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             student_destructor(dummy);
         
         break;
+
         case 2:
             // command: delete, value: student id
             if (!value) {help(); return;}
@@ -337,6 +347,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             student_destructor(dummy);
         
         break;
+
         case 3:
             // command: number of registrants, value: alpharethmetic for the year
             if (!value) {help(); return;}
@@ -355,6 +366,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             }    
 
         break;
+
         case 4:
             // command: top n-th students, value: n year
             if (!value) {help(); return;}
@@ -375,16 +387,16 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 } else {
                     print_manager_error(4, data[1]);
                 }
-                for (int i = 0; i < cols; i++)
-                    free(data[i]);
-                free(data);
             } else {
-                print_manager_error(4, data[1]);
                 help();
             }
             
+            for (int i = 0; i < cols; i++)
+                free(data[i]);
+            free(data);
 
         break;
+
         case 5:
             // command: avg, value: year
             if (!value) {help(); return;}
@@ -396,12 +408,14 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 if (std_list && list_len(std_list) > 0) {
                     printf("> Avg GPA for %s : %.2f\n", value, avg_gpa(std_list));
                 } else {
-                    
+                    print_manager_error(5, value);
                 }
             } else {
                 print_manager_error(5, value);
+                help();
             }
         break;
+
         case 6:
             // command: min, value: year
             if (!value) {help(); return;}
@@ -424,6 +438,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             }
 
         break;
+
         case 7:
             // command: count (students per year), value = (null)
             if (!value) {
@@ -441,12 +456,13 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 help();
             }
         break;
+
         case 8:
             // command: postal, value: rank
             // we must find the rank-th most popular zip code 
             // one approach woul be to keep a list of all post codes and when we insert a student
             // we will update the according zip code or add it if it does not exist in the list.
-            if (is_numeric(value)) {
+            if (value && is_numeric(value)) {
                 int rank = strtol(value, NULL, 10); // get the numeric value straight
                 List zip_codes = get_rankth_zip(manager->zip_codes_count, rank);
                 if (zip_codes != NULL) {
@@ -460,7 +476,8 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             } else {
                 help();
             }
-        break; 
+        break;
+
         case 9:
             // command : exit, value = NULL
             is_end = true;

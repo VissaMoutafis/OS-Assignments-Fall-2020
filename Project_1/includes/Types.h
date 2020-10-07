@@ -8,6 +8,7 @@
 // THAT HELP WITH THE OVERALL ABSTRACTION LEVELING OF THE PROJECT
 int cur_year;
 bool cnfg;
+#define STUDENT_ATR_NUM 6
 
 typedef void *Pointer; //We will use the Pointer notation for Item and/or Key type
 
