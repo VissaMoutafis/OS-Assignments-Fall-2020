@@ -68,7 +68,7 @@ void initialize_with(char* filename, ManageStudents mngstd) {
     // erro checking for the file
     if (fin) {
         // count the lines
-        int lines = fget_lines(filename);
+        int lines = mngstd->student_count;
         for (int i = 0; i < lines; i++) {
             // take the data string from the file and turn it to a data table
             char* data_str = make_str(&fin);
@@ -82,8 +82,6 @@ void initialize_with(char* filename, ManageStudents mngstd) {
             free(data_table);
         }
 
-        // number of insert = number of students = lines of the file
-        mngstd->student_count = lines;
         fclose(fin);
     } else {
         // error message
@@ -246,13 +244,13 @@ static List get_students_per_year(InvertedIndex index) {
 ManageStudents mngstd_create(Compare std_compare, ItemDestructor std_destructor, Hash_Func std_hash_func, char* in_filename) {
     // create the struct
 
-    ManageStudents mngstd = malloc(sizeof(*mngstd));    
-    
-    size_t num_of_entries = DEFAULT_ENTRIES;
+    ManageStudents mngstd = malloc(sizeof(*mngstd));
+
+    size_t num_of_entries = in_filename ? fget_lines(in_filename) : 0; // set the number of entries
 
     // creation
-    mngstd->student_count = 0;    
-    mngstd->students = ht_create(std_compare, std_hash_func, std_destructor, num_of_entries);
+    mngstd->student_count = 0;
+    mngstd->students = ht_create(std_compare, std_hash_func, std_destructor, num_of_entries ? num_of_entries : DEFAULT_ENTRIES);
     mngstd->year_of_study_idx = invidx_create(std_compare, NULL);
     mngstd->zip_codes_count = list_create(zip_code_compare, zip_code_destructor);
     // file initialization
