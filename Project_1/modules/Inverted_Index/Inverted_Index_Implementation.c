@@ -106,17 +106,22 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
     dummy->year = (cur_year - ((Student)student)->year_of_registration) + 1;
     // we get the list node that contains the Index as entry
     ListNode cur = list_find(invidx->indexes, dummy);
-    free(dummy);
+    
     if (cur) {
         // if such list exist
         // make clean that the entry is an Index
         Index entry = (Index)list_node_get_entry(invidx->indexes, cur);
 
         // If the node exists in the index list delete it
-        if (list_find(entry->students, student)) 
+        if (list_find(entry->students, student)) {
             list_delete(entry->students, student, true, old_entry);
+            // check if list is empty
+            Pointer old;
+            if (list_len(entry->students) == 0)
+                list_delete(invidx->indexes, dummy, true, &old);
+        }
     }
-    
+    free(dummy);
 }
 
 List invidx_students_at(InvertedIndex invidx, int year) {

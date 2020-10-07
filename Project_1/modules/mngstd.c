@@ -246,15 +246,15 @@ ManageStudents mngstd_create(Compare std_compare, ItemDestructor std_destructor,
 
     ManageStudents mngstd = malloc(sizeof(*mngstd));
 
-    size_t num_of_entries = in_filename ? fget_lines(in_filename) : 0; // set the number of entries
+    size_t num_of_entries = in_filename != NULL ? fget_lines(in_filename) : 0; // set the number of entries
 
     // creation
-    mngstd->student_count = 0;
+    mngstd->student_count = num_of_entries;
     mngstd->students = ht_create(std_compare, std_hash_func, std_destructor, num_of_entries ? num_of_entries : DEFAULT_ENTRIES);
     mngstd->year_of_study_idx = invidx_create(std_compare, NULL);
     mngstd->zip_codes_count = list_create(zip_code_compare, zip_code_destructor);
     // file initialization
-    if (in_filename)
+    if (in_filename) 
         initialize_with(in_filename, mngstd);
 
     return mngstd;
@@ -328,6 +328,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 ZipCount zip_dummy = create_zip_count(((Student)s)->postal, 0, false);
                 ListNode zip_n = list_find(manager->zip_codes_count, zip_dummy);
                 ZipCount entry = (ZipCount)list_node_get_entry(manager->zip_codes_count, zip_n);
+                free(zip_dummy);
                 entry->count -= 1;
 
                 // Now we are ready: delete it first from the index:
