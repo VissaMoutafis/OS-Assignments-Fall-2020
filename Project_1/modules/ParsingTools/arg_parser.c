@@ -40,7 +40,7 @@ static bool check_val(char* val, char ** args, int arg_size) {
 // parsing or not.
 // Also we will pass a pointer to a string-array so that
 // the user gets the input values in some way
-void args_parser(int argc, char **argv, char ***input, int *input_size) {
+void args_parser(int argc, char **argv, char ***input, int *input_size, char** allowed_arguments) {
     
     // Basic constraints :
     // 1. the input values must be at most 4 + 1(the program name) values, 7 in total
@@ -64,7 +64,7 @@ void args_parser(int argc, char **argv, char ***input, int *input_size) {
             }
 
             // check if there is a missing value (entries like -i -c config where value for '-i' is NULL) 
-            bool check = value != NULL && check_val(value, (char *[2]){"-i", "-c"}, 2);
+            bool check = value != NULL && check_val(value, allowed_arguments, 2);
                         
             // set the proper field equal to the value
             if (check && strcmp(flag, "-i") == 0){

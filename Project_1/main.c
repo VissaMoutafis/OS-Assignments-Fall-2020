@@ -9,8 +9,8 @@ int main(int argc, char **argv) {
 
     char **arguments;
     int size;
-    
-    args_parser(argc, argv, &arguments, &size); // Something must be done for the configurations
+
+    args_parser(argc, argv, &arguments, &size, (char *[2]){"-i", "-c"}); // Something must be done for the configurations
     if (size == 2) {
         cnfg = true;
         parse_cnfg(arguments[1]);
