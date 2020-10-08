@@ -1,6 +1,8 @@
 
 #include "ManageStudents.h"
 
+cur_year = 2020;    // this can be changed only with a config file
+
 int main(int argc, char **argv) {
     // the main logic of the menu is the following:
     // 1. get the input

@@ -250,8 +250,8 @@ ManageStudents mngstd_create(Compare std_compare, ItemDestructor std_destructor,
 
     // creation
     mngstd->student_count = num_of_entries;
-    mngstd->students = ht_create(std_compare, std_hash_func, std_destructor, num_of_entries ? num_of_entries : DEFAULT_ENTRIES);
-    mngstd->year_of_study_idx = invidx_create(std_compare, NULL);
+    mngstd->students = ht_create(std_compare, std_hash_func, NULL, num_of_entries ? num_of_entries : DEFAULT_ENTRIES);
+    mngstd->year_of_study_idx = invidx_create(std_compare, std_destructor);
     mngstd->zip_codes_count = list_create(zip_code_compare, zip_code_destructor);
     // file initialization
     if (in_filename) 
@@ -330,14 +330,16 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 ZipCount entry = (ZipCount)list_node_get_entry(manager->zip_codes_count, zip_n);
                 free(zip_dummy);
                 entry->count -= 1;
-
-                // Now we are ready: delete it first from the index:
-                // a fix because in inverted index you look based on year
-                dummy->year_of_registration = ((Student)s)->year_of_registration; 
-                invidx_delete(manager->year_of_study_idx, dummy, true, &s);
                 
-                // now delete it from the hash table to delete it normally
+                // now delete firstly from the hash table to delete it normally
                 ht_delete(manager->students, dummy, true, &s);
+
+                // Now we are ready: delete it from the index:
+                
+                // a fix because in inverted index you search based on year
+                dummy->year_of_registration = ((Student)s)->year_of_registration;
+                invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+
                 printf("> Student %s deleted.\n", value);
             } else {
                 print_manager_error(2, value);
