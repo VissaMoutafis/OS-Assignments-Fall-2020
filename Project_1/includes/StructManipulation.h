@@ -24,6 +24,7 @@ int student_compare(Pointer s1, Pointer s2);               // students compariso
 void student_destructor(Pointer s);                        // student destruction function
 size_t student_hash(Pointer s);                            // student hashing function
 void student_visit(Pointer s);                             // student printing function
+void print_student_id(Pointer s);
 int std_gpa_compare(Pointer s1, Pointer s2);               // student gpa comparison function
 Pointer create_zip_count(char *zip, int count, bool deep_copy); // constructor
 int zip_code_compare(Pointer zip1, Pointer zip2);          // zip code compare function

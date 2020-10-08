@@ -182,7 +182,7 @@ static List min_gpa_students(List std_list) {
     // won't have to know where the pointers point to.
     
     if (!std_list) return NULL;
-    
+
     List sorted = list_create(student_compare, NULL); // NULL destructor to clean only the list nodes 
     get_sorted_list(std_list, sorted, std_gpa_compare); // get the sorted version of the student list
     List min_students = list_create(student_compare, NULL);
@@ -198,7 +198,7 @@ static List min_gpa_students(List std_list) {
             head = list_get_prev(sorted, head);
         }
         // at this point head->next points to the first student of the min list
-        head = list_get_next(sorted, head);
+        head = head ? list_get_next(sorted, head) : list_get_head(sorted);
 
         while (head) {
             Pointer student = list_node_get_entry(sorted, head);
@@ -250,8 +250,8 @@ ManageStudents mngstd_create(Compare std_compare, ItemDestructor std_destructor,
 
     // creation
     mngstd->student_count = num_of_entries;
-    mngstd->students = ht_create(std_compare, std_hash_func, NULL, num_of_entries ? num_of_entries : DEFAULT_ENTRIES);
-    mngstd->year_of_study_idx = invidx_create(std_compare, std_destructor);
+    mngstd->students = ht_create(std_compare, std_hash_func, std_destructor, num_of_entries ? num_of_entries : DEFAULT_ENTRIES);
+    mngstd->year_of_study_idx = invidx_create(std_compare, NULL);
     mngstd->zip_codes_count = list_create(zip_code_compare, zip_code_destructor);
     // file initialization
     if (in_filename) 
@@ -328,17 +328,23 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 ZipCount zip_dummy = create_zip_count(((Student)s)->postal, 0, false);
                 ListNode zip_n = list_find(manager->zip_codes_count, zip_dummy);
                 ZipCount entry = (ZipCount)list_node_get_entry(manager->zip_codes_count, zip_n);
-                free(zip_dummy);
                 entry->count -= 1;
+                zip_code_destructor(zip_dummy);
+                if (entry->count <= 0) {
+                    Pointer old_entry;
+                    // the zip code is empty so delete the node from the list
+                    list_delete(manager->zip_codes_count, entry, false, &old_entry);
+                }
                 
-                // now delete firstly from the hash table to delete it normally
-                ht_delete(manager->students, dummy, true, &s);
 
                 // Now we are ready: delete it from the index:
-                
+
                 // a fix because in inverted index you search based on year
                 dummy->year_of_registration = ((Student)s)->year_of_registration;
-                invidx_delete(manager->year_of_study_idx, dummy, true, &s);
+                invidx_delete(manager->year_of_study_idx, dummy, false, &s);
+
+                // now delete firstly from the hash table to delete it normally
+                ht_delete(manager->students, dummy, true, &s);
 
                 printf("> Student %s deleted.\n", value);
             } else {
@@ -382,7 +388,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                     List top_n_th = list_get_top_n(student_list, std_gpa_compare, n);
                     
                     // print the list
-                    list_print(top_n_th, student_visit);
+                    list_print(top_n_th, print_student_id);
                     // deallocate the memory
                     list_destroy(&top_n_th);
                 } else {
@@ -428,7 +434,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 if (std_list && list_len(std_list) > 0) {
                     List min_gpa_std_list = min_gpa_students(std_list); // return the list of the students with the minimum gpa
                     printf("> ");
-                    list_print(min_gpa_std_list, student_visit);
+                    list_print(min_gpa_std_list, print_student_id);
                     printf("\n");
                     list_destroy(&min_gpa_std_list);
                 } else {
