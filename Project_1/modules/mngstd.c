@@ -333,7 +333,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 if (entry->count <= 0) {
                     Pointer old_entry;
                     // the zip code is empty so delete the node from the list
-                    list_delete(manager->zip_codes_count, entry, false, &old_entry);
+                    list_delete(manager->zip_codes_count, entry, true, &old_entry);
                 }
                 
 
@@ -341,7 +341,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
 
                 // a fix because in inverted index you search based on year
                 dummy->year_of_registration = ((Student)s)->year_of_registration;
-                invidx_delete(manager->year_of_study_idx, dummy, false, &s);
+                invidx_delete(manager->year_of_study_idx, dummy, true, &s);
 
                 // now delete firstly from the hash table to delete it normally
                 ht_delete(manager->students, dummy, true, &s);
