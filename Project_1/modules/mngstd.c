@@ -343,7 +343,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
                 dummy->year_of_registration = ((Student)s)->year_of_registration;
                 invidx_delete(manager->year_of_study_idx, dummy, true, &s);
 
-                // now delete firstly from the hash table to delete it normally
+                // now delete lastly from the hash table to delete  the actual student record
                 ht_delete(manager->students, dummy, true, &s);
 
                 printf("> Student %s deleted.\n", value);
