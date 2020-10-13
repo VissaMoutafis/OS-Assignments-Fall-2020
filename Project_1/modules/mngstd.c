@@ -1,3 +1,8 @@
+/*
+**  Student Manager Implementation
+**  Written by Vissarion Moutafis sdi1800119
+*/
+
 #include "ManageStudents.h"
 
 struct mngstd {

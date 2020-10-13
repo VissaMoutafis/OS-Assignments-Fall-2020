@@ -1,5 +1,6 @@
 /*
 ** Double Linked List Implementation
+**  Written by Vissarion Moutafis sdi1800119
 */
 
 #include "List.h"

@@ -1,3 +1,7 @@
+/*
+**  Parsing command line arguments functions
+**  Written by Vissarion Moutafis sdi1800119
+*/
 #include "ParsingUtils.h"
 #include "HT.h"
 

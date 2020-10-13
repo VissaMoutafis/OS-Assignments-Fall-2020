@@ -1,7 +1,8 @@
 /*
-** Here we implement all the struct manipulation function that help us
-** make our code more readable and generic (no need for large functions)
-** This functions accomodate basic functionalities that we could change easily whenever we want to.
+**  Here we implement all the struct manipulation function that help us
+**  make our code more readable and generic (no need for large functions)
+**  This functions accomodate basic functionalities that we could change easily whenever we want to.
+**  Written by Vissarion Moutafis sdi1800119
 */
 #include "StructManipulation.h"
 #include <stdio.h>

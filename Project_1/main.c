@@ -1,4 +1,7 @@
-
+/*
+**  Main function and basic app logic 
+**  Written by Vissarion Moutafis sdi1800119
+*/
 #include "ManageStudents.h"
 
 int cur_year = 2020;    // this can be changed only with a config file

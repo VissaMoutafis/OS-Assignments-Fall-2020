@@ -1,6 +1,7 @@
 /*  
 **  Hash Table Implementation
 **  Using Open Addressing with Double Hashing
+**  Written by Vissarion Moutafis sdi1800119
 */
 #include <stdio.h>
 #include <stdlib.h>

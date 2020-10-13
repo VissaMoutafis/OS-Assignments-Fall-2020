@@ -1,3 +1,7 @@
+/*
+**  TTY-like API methods
+**  Written by Vissarion Moutafis sdi1800119
+*/
 #include "TTY.h"
 
 

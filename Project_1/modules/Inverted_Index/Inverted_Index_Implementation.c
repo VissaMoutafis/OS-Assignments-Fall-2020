@@ -1,5 +1,6 @@
 /*
 **  Inverted Index Data Structure Implementation
+**  Written by Vissarion Moutafis sdi1800119
 */
 
 #include "InvertedIndex.h"
