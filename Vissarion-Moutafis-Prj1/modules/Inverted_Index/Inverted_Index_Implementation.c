@@ -115,7 +115,7 @@ void invidx_delete(InvertedIndex invidx, Pointer student, bool delete_entry, Poi
 
         // If the node exists in the index list delete it
         if (list_find(entry->students, student)) {
-            list_delete(entry->students, student, true, old_entry);
+            list_delete(entry->students, student, delete_entry, old_entry);
             // check if list is empty
             Pointer old;
             if (list_len(entry->students) == 0)

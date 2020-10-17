@@ -116,6 +116,7 @@ int zip_code_compare(Pointer zip1, Pointer zip2) {
 
 void zip_code_destructor(Pointer zip) {
     // we dont need to destroy the zip->postal_code since it is shallow copied
+    free(((ZipCount)zip)->postal_code);
     free(zip);
 }
 void zip_code_print(Pointer zip) {

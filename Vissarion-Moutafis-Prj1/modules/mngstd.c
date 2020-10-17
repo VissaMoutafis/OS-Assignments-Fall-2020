@@ -46,7 +46,7 @@ void insert_student(ManageStudents manager, char **data_table) {
         
         // now we must check if the zip code exists.
         // if it is then increase the counter, else insert a ZipCount instance in the list
-        ZipCount dummy = create_zip_count(data_table[3], 0, false);
+        ZipCount dummy = create_zip_count(data_table[3], 0, true);
         ListNode n = list_find(manager->zip_codes_count, dummy);
         if (n != LIST_EOF) {
             // if it exists increase the counter
@@ -56,7 +56,7 @@ void insert_student(ManageStudents manager, char **data_table) {
             // the entry doesn't exist => insert it
             // create a shallow copy and mind that the destructor won't touch the postal code string during 
             // exit memory deallocation
-            list_insert(manager->zip_codes_count, create_zip_count(data_table[3], 0, false), true);
+            list_insert(manager->zip_codes_count, create_zip_count(data_table[3], 1, true), true);
         }
 
         // deallocate the memory that is no longer needed
@@ -336,7 +336,7 @@ void mngstd_run(ManageStudents manager, int expr_index, char* value) {
             dummy = create_std(value, NULL, NULL, NULL, 0, 0.0, true);
             if (ht_contains(manager->students, dummy, &s)) {
                 // Before actual deletion we need to decrease the postal code count
-                ZipCount zip_dummy = create_zip_count(((Student)s)->postal, 0, false);
+                ZipCount zip_dummy = create_zip_count(((Student)s)->postal, 0, true);
                 ListNode zip_n = list_find(manager->zip_codes_count, zip_dummy);
                 ZipCount entry = (ZipCount)list_node_get_entry(manager->zip_codes_count, zip_n);
                 entry->count -= 1;

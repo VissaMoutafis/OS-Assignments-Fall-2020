@@ -18,13 +18,13 @@ OBJS = main.o
 # 	to give your own parameters to the program
 
 # example: 
-# INPUT_FILE = ./k22-prj1-test-data/input300000.txt
+# INPUT_FILE = ./k22-prj1-test-data/input3000.txt
 # CONFIG_FILE = config
 
 # -------------------------------------------------------------------
 
 # if you wanna add command line args un-comment the line below
-# ARGS = -i $(INPUT_FILE)
+# ARGS = -i $(INPUT_FILE) -c $(CONFIG_FILE)
 
 
 include $(MODULES)/modules.inc

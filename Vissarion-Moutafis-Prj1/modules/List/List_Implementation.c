@@ -143,7 +143,7 @@ bool list_delete(List list, Pointer entry,  bool delete_entry, Pointer *old_entr
     ListNode node = list_find(list, entry);
     if (node) {
         list->count--;
-        *old_entry = delete_entry == false ? list_node_get_entry(list, node) : NULL;
+        *old_entry = (delete_entry == false) ? list_node_get_entry(list, node) : NULL;
         ListNode prev, next;
         prev = node->prev;
         next = node->next;
@@ -164,6 +164,7 @@ bool list_delete(List list, Pointer entry,  bool delete_entry, Pointer *old_entr
         if (delete_entry) {
             if (list->itemDestructor)
                 list->itemDestructor(node->entry);
+            *old_entry = NULL;
         }
         free(node);
         return true;

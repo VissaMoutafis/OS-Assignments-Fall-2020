@@ -143,13 +143,12 @@ void ht_delete(HT hash_table, Pointer key, bool delete_key, Pointer *key_ptr) {
     List table_list = NULL;
     *key_ptr = NULL;
 
-    if (find_key(hash_table->array, hash_table->size, key, key_hash, &entry_node, &table_list))
-    {
+    if (find_key(hash_table->array, hash_table->size, key, key_hash, &entry_node, &table_list)) {
         // we found the key => we delete the entry node but we don't yet delete the key
         list_delete(hash_table->array[key_hash], key, false, key_ptr);
 
         // we consider the delete_key flag to wheher delete the key or not.
-        if (delete_key == true && hash_table->itemDestructor != NULL) { 
+        if (delete_key && hash_table->itemDestructor != NULL) { 
             // if we wanna delete the key
             // destroy the key
             hash_table->itemDestructor(*key_ptr);
