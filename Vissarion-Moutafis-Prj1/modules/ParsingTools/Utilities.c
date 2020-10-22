@@ -74,6 +74,10 @@ char *make_str(FILE **_stream_) {
 // classic trick to count the number of lines in a file
 size_t fget_lines(char *filename) {
     FILE *fin = fopen(filename, "r"); // open the file for reading
+    if (!fin) {
+        printf("The file you entered does not exist!\n");
+        exit(EXIT_FAILURE);
+    }
     size_t count = 0;
     unsigned char c;
     while ((c = fgetc(fin)) != EOF && !feof(fin))
@@ -92,18 +96,3 @@ bool is_numeric(char* str) {
     
     return true;
 }
-
-// test main
-// int main(void) {
-//     size_t lines = fget_lines("./input.txt");
-//     FILE *fin = fopen("./input.txt", "r");
-//     for (int i = 0; i < (int)lines; i++){
-//         char* data_str = make_str(&fin);
-//         printf("%s\n", data_str);
-//         int data_cols;
-//         char ** data_table = parse_voter_data(data_str, &data_cols);
-//         for (int j = 0; j < data_cols; j++) 
-//             printf("Data col #%d : %s\n", j+1, data_table[j]);
-//         printf("\n------------------------------\n");
-//     }
-// }
