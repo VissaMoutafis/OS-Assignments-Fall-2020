@@ -22,4 +22,9 @@ uint ch_proc_thresh;
 #define READ 0
 #define WRITE 1
 
+typedef void (*CreateChildren)(int num_of_children, Range* ranges);
 
+// wait for all the children
+void wait_children(void);
+// behaviour of internal processes
+void internal_node_behaviour(int argc, char *argv[], CreateChildren create_children);
