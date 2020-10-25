@@ -1,31 +1,12 @@
 #include "Process.h"
+#include "ParsingUtils.h"
 #include <string.h>
-
 void wait_children(void) {
     int pid, status;
     while ((pid = wait(&status)) != -1) {
         // printf("Child %d exited with status %d.\n", pid, status);
     }
     // printf("Parent %d exited\n", getpid());
-}
-
-char* num_to_str(int num) {
-    if (num == 0) return "0";
-
-    char* str = calloc(1, sizeof(char));
-    int len = 1;
-    while (num) {
-        char dig = num%10 + '0';
-        num /= 10;
-
-        char* new_str = calloc(++len, sizeof(char));
-        strcpy(new_str+1, str);
-        new_str[0] = dig;
-        free(str);
-        str = new_str;
-    }
-
-    return str;
 }
 
 // create n ranges from the interval [low, high]

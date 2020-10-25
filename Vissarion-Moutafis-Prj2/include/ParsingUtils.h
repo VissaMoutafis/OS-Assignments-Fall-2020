@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
-char *make_str(FILE **_stream_);                            // get a line from the stream as a string 
+char *make_str(FILE **_stream_);                            // get a line from the stream as a string
 size_t fget_lines(char *filename);                          // get the #lines of file with name 'filename'
-char **parse_line(char *data_str, int *columns, char* sep); // classic line parser (mush alike python's str.split)
-bool is_numeric(char* str);                                 // check if the string is numeric
+char **parse_line(char *data_str, int *columns, char *sep); // classic line parser (mush alike python's str.split)
+bool is_numeric(char *str);                                 // check if the string is numeric
 char *num_to_str(int num);                                  // int -> string
 
 // Argument Parsing Tool:
@@ -17,8 +17,9 @@ char *num_to_str(int num);                                  // int -> string
 // allowed args of size arg_num: ALL (valued & unvalued) the arguments the user wants to use
 // valued args of size val_args_num: the arguments that take value (i.e. -i "input")
 // usage_format : message like "program -c value -i value -o value" for the error printing
-typedef struct {
-    char** args;
+typedef struct
+{
+    char **args;
     int num;
 } Arguments;
 
