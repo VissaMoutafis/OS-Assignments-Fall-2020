@@ -32,7 +32,7 @@ include $(MODULES)/modules.inc
 $(PROGRAM) : $(OBJS) root
 	$(CC) $(CFLAGS) $(OBJS) $(SRC)/main.o -o $(PROGRAM)
 
-prime-finding-programs: $(PRIME-FINDING-PROGS)/*
+prime-finding-programs: $(PRIME-FINDING-PROGS)/*.c
 	$(CC) $(PRIME-FINDING-PROGS)/primes1.c -lm -o primes1
 	$(CC) $(PRIME-FINDING-PROGS)/primes2.c -lm -o primes2
 	$(CC) $(PRIME-FINDING-PROGS)/primes3.c -lm -o primes3

@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 
     char *bin_path = choose_prime_algo();
     char *args[] = {bin_path, argv[2], argv[4], (char*)0};
-
+    kill(getppid(), SIGUSR1); //send signal to the parent and execute algorithm
     if (execvp(bin_path, args) == -1) {
         perror("execvp()");
     }

@@ -6,41 +6,67 @@
 #include "Types.h"
 #include <string.h>
 
-void create_workers(int num_of_children, Range* ranges) {
-    int fd_board[num_of_children][2];
-    
+void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
+    for (int k = 0; k < num_of_children; k++) {
+        if (child_index != k) {
+            close(fd_board[k][WRITE]);
+            close(fd_board[k][READ]);
+        }
+    }
+}
 
+void child_behaviour(char** args) {
+    if (execvp("./workers", args) == -1) {
+        perror("execvp()");
+        exit(1);
+    }
+}
+
+void handler() {
+   // printf("Helllo\n");
+}
+
+void internal_behaviour(int fd_board[][2], int num_of_children) {
+    for (int i = 0; i < num_of_children; ++i) {
+        char msg[BUFSIZ];
+        signal(SIGUSR1, handler);
+        if (read(fd_board[i][READ], msg, BUFSIZ) > 0)
+            printf("%s \n", msg);
+    }
+}
+
+void create_workers(int num_of_children, Range* ranges) {
+    int fd_board[num_of_children][2]; // this is the board with the file descriptors for each child
     for (int i = 0; i < num_of_children; i++) {
-        
-        // create hte child process
-        pid_t child_pid = fork();
+        // create communication pipe
         if (pipe(fd_board[i]) == -1) {
             perror("pipe()");
             exit(1);
         }
-        dup2(fd_board[i][READ], 0);
-        close(fd_board[i][READ]);
+
+        // create hte child process
+        pid_t child_pid = fork();
+        if (child_pid == -1) {
+            perror("fork");
+            exit(1);
+        }
 
         // if it's a child
         if (child_pid == 0) {
-            close(fd_board[i][READ]); // close the reading side of the pipe
-            dup2(fd_board[i][WRITE], 1); // determine that the new write stream is stdou 
-            close(fd_board[i][WRITE]);
-            
-            char* args[] = {"./workers", "-l", ranges[i].l, "-u", ranges[i].u, (char*)0};
-            if (execvp("./workers", args) == -1) {
-                perror("execvp()");
-                exit(1);
-            }
+            // we first close the siblings' pipes
+            close_sibl_pipes(fd_board, i, num_of_children);
+            // close the reading side of the pipe
+            close(fd_board[i][READ]);                
+            // create the arg list and execute the external node code
+            char *args[] = {"./workers", "-l", ranges[i].l, "-u", ranges[i].u, (char *)0};
+            child_behaviour(args);
         }
     }
-
+    
     for (int i = 0; i < num_of_children; ++i) {
-        char msg[100];
-        read(fd_board[i][READ], msg, 100);
-        printf("Message from child number %d : %s\n", i+1, msg);
+        close(fd_board[i][WRITE]); // close all write fd's
     }
-
+    internal_behaviour(fd_board, num_of_children);
 }
 
 

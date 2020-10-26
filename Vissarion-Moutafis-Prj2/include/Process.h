@@ -9,6 +9,7 @@
 #include <sys/poll.h>
 #include <sys/errno.h>
 #include <stdbool.h>
+#include <syscall.h>
 #include "Types.h"
 
 #define PRIME_ALGOS 3
