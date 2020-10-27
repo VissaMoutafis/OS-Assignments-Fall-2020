@@ -4,12 +4,11 @@
 
 #include "Process.h"
 #include "Types.h"
-#include <string.h>
 
 char* w;
 
 void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
-    for (int k = 0; k < num_of_children; k++) {
+    for (int k = 0; k < child_index; k++) {
         if (child_index != k) {
             close(fd_board[k][WRITE]);
             close(fd_board[k][READ]);
@@ -18,6 +17,7 @@ void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
 }
 
 void child_behaviour(char** args) {
+    sleep(2);
     if (execvp("./internals", args) == -1) {
         perror("execvp()");
         exit(1);

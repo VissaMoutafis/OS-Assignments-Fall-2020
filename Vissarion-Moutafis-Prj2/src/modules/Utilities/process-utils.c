@@ -1,6 +1,6 @@
 #include "Process.h"
 #include "ParsingUtils.h"
-#include <string.h>
+
 void wait_children(void) {
     int pid, status;
     while ((pid = wait(&status)) != -1) {
@@ -40,6 +40,21 @@ static Range* divide_ranges(int n, int low, int high, int*size) {
     return range_board;
 }
 
+void print_primes_from_child(int fd) {
+    char buffer[BUFSIZ];
+    ssize_t error;
+    while((error = read(fd, buffer, BUFSIZ)) != 0) {
+        // read till the end of the file
+        
+        if (error == -1) {
+            //something caused an error in the reading execution
+            perror("read()");
+            exit(1);
+        }
+
+        printf("%s", buffer); // print the buffer
+    }
+}
 
 void internal_node_behaviour(int argc, char* argv[], CreateChildren create_children) {
     // number of children processes

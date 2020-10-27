@@ -3,11 +3,11 @@
 */
 
 #include "Process.h"
+#include "ParsingUtils.h"
 #include "Types.h"
-#include <string.h>
 
-void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
-    for (int k = 0; k < num_of_children; k++) {
+void close_sibl_pipes(int **fd_board, int child_index, int num_of_children) {
+    for (int k = 0; k < child_index; k++) {
         if (child_index != k) {
             close(fd_board[k][WRITE]);
             close(fd_board[k][READ]);
@@ -23,24 +23,30 @@ void child_behaviour(char** args) {
 }
 
 void handler() {
+    signal(SIGUSR1, handler);
+
    // printf("Helllo\n");
 }
 
-void internal_behaviour(int fd_board[][2], int num_of_children) {
+void parent_behaviour(int **fd_board, int num_of_children) {
     for (int i = 0; i < num_of_children; ++i) {
         char msg[BUFSIZ];
-        signal(SIGUSR1, handler);
         if (read(fd_board[i][READ], msg, BUFSIZ) > 0)
             printf("%s \n", msg);
     }
 }
 
 void create_workers(int num_of_children, Range* ranges) {
-    int fd_board[num_of_children][2]; // this is the board with the file descriptors for each child
+    int **fd_board = calloc(num_of_children, sizeof(int*)); // this is the board with the file descriptors for each child
+    for (int i = 0; i < num_of_children; i++) 
+        fd_board[i] = calloc(2, sizeof(int));
+
     for (int i = 0; i < num_of_children; i++) {
+        char algo_index[5];
+        sprintf(algo_index, "%d", i%PRIME_ALGOS);
         // create communication pipe
         if (pipe(fd_board[i]) == -1) {
-            perror("pipe()");
+            perror("pipe");
             exit(1);
         }
 
@@ -58,7 +64,7 @@ void create_workers(int num_of_children, Range* ranges) {
             // close the reading side of the pipe
             close(fd_board[i][READ]);                
             // create the arg list and execute the external node code
-            char *args[] = {"./workers", "-l", ranges[i].l, "-u", ranges[i].u, (char *)0};
+            char *args[] = {"./workers", "-l", ranges[i].l, "-u", ranges[i].u, "-algo", algo_index, (char *)0};
             child_behaviour(args);
         }
     }
@@ -66,7 +72,7 @@ void create_workers(int num_of_children, Range* ranges) {
     for (int i = 0; i < num_of_children; ++i) {
         close(fd_board[i][WRITE]); // close all write fd's
     }
-    internal_behaviour(fd_board, num_of_children);
+    parent_behaviour(fd_board, num_of_children);
 }
 
 
@@ -80,6 +86,10 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Wrong input! ./internal -l min -u max -w num-of-children.\n");
         exit(1);
     }
+
+    // set the 
+    signal(SIGUSR1, handler);
+
     internal_node_behaviour(argc, argv, create_workers);
 
     exit(0);
