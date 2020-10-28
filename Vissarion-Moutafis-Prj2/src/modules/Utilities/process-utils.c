@@ -1,5 +1,7 @@
+#include <limits.h>
 #include "Process.h"
 #include "ParsingUtils.h"
+#include "PQ.h"
 
 void wait_children(void) {
     int pid, status;
@@ -72,11 +74,181 @@ void internal_node_behaviour(int argc, char* argv[], CreateChildren create_child
     // waiting for the children to exit
     wait_children();
 
-
     // free memory
     for (int i = 0; i < num_of_children; i++) {
         free(ranges[i].l);
         free(ranges[i].u);
     }
     free(ranges);
+}
+
+
+typedef struct {
+    int n;
+    float time;
+} *PrimePair;
+
+int compare_pair(Pointer a, Pointer b) {
+    // The input will be an integer
+    return ((PrimePair)a)->n - ((PrimePair)b)->n;
+}
+
+Pointer make_pair(char* str) {
+    PrimePair a = malloc(sizeof(*a));
+
+    // parse the input
+    int cols;
+    char** str_pair = parse_line(str, &cols, ",");
+    // set the values
+    a->n = atoi(str_pair[0]);
+    a->time = strtof(str_pair[1], NULL);
+    // free the no longer needed memory
+    free(str_pair[0]);
+    free(str_pair[1]);
+    free(str_pair);
+
+    return (Pointer)a;
+}
+
+void visit_pair(Pointer p) {
+    PrimePair a = (PrimePair)p;
+    printf("%d,%.1f ", a->n, a->time);
+}
+
+float get_timestamp(int fd) {
+    char buffer[2]="";
+    char *entry = calloc(1, sizeof(char));
+    int len = 0;
+
+    while (read(fd, buffer, 1) > 0) {
+        if (strcmp(buffer, ":") == 0)
+            break;
+
+        char *new_entry = calloc(++len + 1, sizeof(char));
+        strcpy(new_entry, entry);
+        free(entry);
+        new_entry[len-1] = buffer[0];
+        entry = new_entry;
+    }
+
+    float timestamp = strtof(entry, NULL);
+    free(entry);
+
+    return timestamp;
+}
+
+void use_input(int fd, PQ pq, float* max_time, float* min_time) {
+    char *entry = calloc(1, sizeof(char));
+    int len = 0;
+    char buffer[1];
+    while(read(fd, buffer, 1) > 0) {
+        if (strcmp(buffer, "\n") == 0)
+            continue;
+
+        // check for timestamps (min max)
+        if (strcmp(buffer, ":") == 0) {
+            float t = get_timestamp(fd);
+            if ((t - (*min_time)) <= 0.1){
+                *min_time = t;
+            }
+            if ((t - (*max_time)) >= 0.1){            
+                *max_time = t;
+            }
+        }
+
+        // build the number
+        if (strcmp(buffer, " ") != 0) {
+            // we add an extra digit to the pqueue
+            char *new_entry = calloc(++len + 1, sizeof(char));
+            strcpy(new_entry, entry);
+            free(entry);
+            new_entry[len - 1] = buffer[0];
+            entry = new_entry;
+        } else {
+            // we reached the end of a pair string
+            // add the pair to the pqueue
+            pq_push(pq, make_pair(entry));
+            // free the reserved memory since the string is no longer needed
+            free(entry);
+            // reset the string
+            entry = calloc(1, sizeof(char));
+            len = 0;
+        }
+    }
+}
+
+void internal_read_from_child(int fd_array[][2], int number_of_children) {
+    // make a pq to print the children sorted
+    PQ pq = pq_create(compare_pair, free);
+    float max_time=0, min_time = 9999999;
+    bool has_active_children = false;
+    struct pollfd fds[number_of_children];
+    int open_files = number_of_children;
+    //set up the fds array
+    for (int i = 0; i < number_of_children; i++) {
+        fds[i].events = POLLIN;
+        fds[i].fd = fd_array[i][READ];
+        fds[i].revents = 0;
+    }
+
+    while(open_files) {
+        // call the poll syscall
+        int retpoll = poll(fds, number_of_children, TIMEOUT);
+
+        if (retpoll > 0) {
+            for (int i = 0; i < number_of_children; i++)
+                if (fds[i].fd != -1) {
+                    if (fds[i].revents & POLLIN) { // if the file descriptor is in the ready list
+                    
+                        use_input(fds[i].fd, pq, &max_time, &min_time);
+                        has_active_children = true;
+                    } else if (fds[i].revents & POLLHUP){
+                        fds[i].fd = -1;
+                        open_files--;
+                    }
+                }
+        } else if (retpoll < 0) {
+            perror("poll");
+            exit(1);
+        }
+    }
+
+    while (!pq_empty(pq)) {
+        Pointer pair = pq_pop(pq);
+        visit_pair(pair);
+        free(pair);
+    }
+    if (has_active_children)
+        printf(":%.1f::%.1f:\n", max_time, min_time);
+    pq_destroy(pq);
+}
+
+void set_signal_handler(int signo, void (*handler)(int, siginfo_t *, void *)) {
+    struct sigaction act;
+    memset(&act, '\0', sizeof(act));
+    act.sa_sigaction = handler;
+    act.sa_flags = SA_SIGINFO;
+    // set up signal handler 
+    if (sigaction(signo, &act, NULL) < 0) {
+		perror ("sigaction");
+		exit(1);
+	}
+}
+
+void wait_signal_from_parent(void (*handler)(int, siginfo_t *, void *)) {
+    printf("waiting %d", getpid());
+    // set the signal handler
+    set_signal_handler(SIGUSR1, handler);
+    // wait for parents signal
+    pause();
+}
+
+// function to close all the pipes from unrelated to the IO siblings
+void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
+    for (int k = 0; k < child_index; k++) {
+        if (child_index != k) {
+            close(fd_board[k][WRITE]);
+            close(fd_board[k][READ]);
+        }
+    }
 }

@@ -30,7 +30,7 @@ void insert_sorted(PQ pq, Pointer entry) {
         cur = cur->next;
     }
     if (prev == NULL)
-        pq->head = new_node(entry, cur);
+        pq->head = new_node(entry, pq->head);
     else
         prev->next = new_node(entry, cur);
 }

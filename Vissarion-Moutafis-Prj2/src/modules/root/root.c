@@ -6,20 +6,13 @@
 #include "Types.h"
 
 char* w;
-int signals_encountered = 0;
-void handler(int sig) {
-    signal(SIGUSR1, handler);
-    if (sig == SIGUSR1) {
-        signals_encountered++;
-    }
-}
-void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
-    for (int k = 0; k < child_index; k++) {
-        if (child_index != k) {
-            close(fd_board[k][WRITE]);
-            close(fd_board[k][READ]);
-        }
-    }
+volatile sig_atomic_t signals_encountered = 0;
+
+void root_handler (int sig, siginfo_t *siginfo, void *context) {
+    signals_encountered++;
+    pid_t pid = siginfo->si_value.sival_int;
+    printf("root Caught %d\n", pid);
+    kill(pid, SIGUSR1);
 }
 
 void child_behaviour(char** args) {
@@ -27,6 +20,13 @@ void child_behaviour(char** args) {
         perror("execvp()");
         exit(1);
     }
+}
+
+void parent_behaviour(int fd_board[][2], int num_of_children) {
+    // read and print the appropriate messages
+    internal_read_from_child(fd_board, num_of_children);
+    // for (int i = 0; i < num_of_children; i++)
+    //     print_primes_from_child(fd_board[i][READ]);
 }
 
 void create_internals(int num_of_children, Range* ranges) {
@@ -50,22 +50,22 @@ void create_internals(int num_of_children, Range* ranges) {
             // we first close the siblings' pipes
             close_sibl_pipes(fd_board, i, num_of_children);
             
-            close(fd_board[i][READ]);                // close the reading side of the pipe
+            close(fd_board[i][READ]);   
+            dup2(fd_board[i][WRITE], STDOUT_FILENO); 
+            close(fd_board[i][WRITE]); 
 
             char* args[] = {"./internals", "-l", ranges[i].l, "-u", ranges[i].u, "-w", w, (char*)0};
             child_behaviour(args);
         }
     }
-    
+
     for (int i = 0; i < num_of_children; ++i) {
         close(fd_board[i][WRITE]); // close all write fd's
-        char msg[BUFSIZ];
-        if (read(fd_board[i][READ], msg, BUFSIZ) > 0)
-            printf("%s ", msg);
     }
-}
 
-int main(int argc, char* argv[]) {
+    parent_behaviour(fd_board, num_of_children);
+}
+void check_args(int argc, char* argv[]) {
     if (argc != 7) {
         fprintf(stderr, "Wrong input! ./root -l min -u max -w num-of-children.\n");
         exit(1);
@@ -75,11 +75,14 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Wrong input! ./root -l min -u max -w num-of-children.\n");
         exit(1);
     }
-    signal(SIGUSR1, handler);
+}
+int main(int argc, char* argv[]) {
+    check_args(argc, argv);
+    set_signal_handler(SIGUSR1, root_handler);
 
     w = argv[6];
-
+    printf("\nPID %d\n", getpid());
     internal_node_behaviour(argc, argv, create_internals);
-    printf("Total SIGUSR1 signals encountered: %d\n",signals_encountered);
+    
     exit(0);
 }
