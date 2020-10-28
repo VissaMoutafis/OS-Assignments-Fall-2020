@@ -24,15 +24,12 @@ void child_behaviour(char** args) {
 
 void handler() {
     signal(SIGUSR1, handler);
-
-   // printf("Helllo\n");
+    kill(getppid(), SIGUSR1); // send a usr1 to proccess-tree root
 }
 
 void parent_behaviour(int **fd_board, int num_of_children) {
     for (int i = 0; i < num_of_children; ++i) {
-        char msg[BUFSIZ];
-        if (read(fd_board[i][READ], msg, BUFSIZ) > 0)
-            printf("%s \n", msg);
+        print_primes_from_child(fd_board[i][READ]);
     }
 }
 
@@ -89,7 +86,7 @@ int main(int argc, char* argv[]) {
 
     // set the 
     signal(SIGUSR1, handler);
-
+    
     internal_node_behaviour(argc, argv, create_workers);
 
     exit(0);

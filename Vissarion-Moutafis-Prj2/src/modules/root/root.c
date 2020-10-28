@@ -6,7 +6,13 @@
 #include "Types.h"
 
 char* w;
-
+int signals_encountered = 0;
+void handler(int sig) {
+    signal(SIGUSR1, handler);
+    if (sig == SIGUSR1) {
+        signals_encountered++;
+    }
+}
 void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
     for (int k = 0; k < child_index; k++) {
         if (child_index != k) {
@@ -17,7 +23,6 @@ void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children) {
 }
 
 void child_behaviour(char** args) {
-    sleep(2);
     if (execvp("./internals", args) == -1) {
         perror("execvp()");
         exit(1);
@@ -70,10 +75,11 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Wrong input! ./root -l min -u max -w num-of-children.\n");
         exit(1);
     }
+    signal(SIGUSR1, handler);
 
     w = argv[6];
 
     internal_node_behaviour(argc, argv, create_internals);
-
+    printf("Total SIGUSR1 signals encountered: %d\n",signals_encountered);
     exit(0);
 }

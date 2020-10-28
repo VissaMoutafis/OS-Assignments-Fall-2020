@@ -17,20 +17,30 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Wrong input! ./workers -l min -u max -algo algo num\n");
         exit(1);
     }
-    if( !( is_numeric(argv[2]) && is_numeric(argv[4]) && is_numeric(argv[6]) && atoi(argv[6]) <= PRIME_ALGOS) ) {
+    if( !( is_numeric(argv[2]) && is_numeric(argv[4]) && is_numeric(argv[6])) ) {
         fprintf(stderr, "All args must be numeric.\n");
+        exit(1);
+    }
+    if(!(atoi(argv[6]) <= PRIME_ALGOS)) {
+        fprintf(stderr, "The algorithm inedx must be between 0 and %d.\n", PRIME_ALGOS-1);
         exit(1);
     }
 
     int fd[2];
     if (pipe(fd) == -1) {
-        perror("pipe()");
+        perror("pipe");
         exit(1);
     }
+
     // close the pipe write-end for parent
     close(fd[WRITE]);
 
     pid_t child_pid = fork();
+    if (child_pid == -1) {
+        perror("fork");
+        exit(1);
+    }
+    
     if(child_pid == 0) {
         // child case
         
