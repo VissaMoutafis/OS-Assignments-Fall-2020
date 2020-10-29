@@ -6,13 +6,18 @@
 #include "Types.h"
 
 char* w;
+int n;
 volatile sig_atomic_t signals_encountered = 0;
+sig_atomic_t *pids_visited;
 
 void root_handler (int sig, siginfo_t *siginfo, void *context) {
-    signals_encountered++;
-    pid_t pid = siginfo->si_value.sival_int;
-    printf("root Caught %d\n", pid);
-    kill(pid, SIGUSR1);
+    volatile sig_atomic_t pid = siginfo->si_value.sival_int;
+    if (pids_visited[pid%(n*n)] == 0){
+        signals_encountered++;
+        printf("Caught %d\n", pid);
+        pids_visited[pid%(n*n)] = 1;
+        kill(pid, SIGUSR1);
+    }
 }
 
 void child_behaviour(char** args) {
@@ -22,11 +27,21 @@ void child_behaviour(char** args) {
     }
 }
 
+void catch_usr1(int timeouts) {
+    timeouts = timeouts * timeouts;
+    int fails = 0;
+    float sec_wait = 1.0;
+    while(timeouts-- && fails <= 10) {
+        fails++;
+        sleep(sec_wait);
+    }
+}
+
 void parent_behaviour(int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
+    catch_usr1(num_of_children);
     internal_read_from_child(fd_board, num_of_children);
-    // for (int i = 0; i < num_of_children; i++)
-    //     print_primes_from_child(fd_board[i][READ]);
+    set_signal_handler(SIGUSR1, root_handler);
 }
 
 void create_internals(int num_of_children, Range* ranges) {
@@ -37,6 +52,21 @@ void create_internals(int num_of_children, Range* ranges) {
             perror("pipe()");
             exit(1);
         }
+
+        if (fcntl(fd_board[i][WRITE],
+                  F_SETFL,
+                  fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0)
+            {
+                perror("fcntl");
+                exit(1);
+            }
+        if(fcntl(fd_board[i][READ],
+              F_SETFL,
+              fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0)
+            {
+                perror("fcntl");
+                exit(1);
+            }
 
         // create hte child process
         pid_t child_pid = fork();
@@ -50,6 +80,7 @@ void create_internals(int num_of_children, Range* ranges) {
             // we first close the siblings' pipes
             close_sibl_pipes(fd_board, i, num_of_children);
             
+            // make sure that the child will print the out put to the pipe's write-end
             close(fd_board[i][READ]);   
             dup2(fd_board[i][WRITE], STDOUT_FILENO); 
             close(fd_board[i][WRITE]); 
@@ -81,8 +112,17 @@ int main(int argc, char* argv[]) {
     set_signal_handler(SIGUSR1, root_handler);
 
     w = argv[6];
+    
+    n = atoi(w);
+    pids_visited = calloc(n*n, sizeof(int)); // max amount of different signals are n*n
+    
+    for (int i = 0; i < n*n; i++)
+        pids_visited[i] = 0;
+    
     printf("\nPID %d\n", getpid());
     internal_node_behaviour(argc, argv, create_internals);
     
+    printf("Total SIGUSR1 signals received: %d\n", signals_encountered);
+    free(pids_visited);
     exit(0);
 }

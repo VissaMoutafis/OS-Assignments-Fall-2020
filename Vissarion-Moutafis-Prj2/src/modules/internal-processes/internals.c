@@ -14,27 +14,25 @@ void child_behaviour(char** args) {
         exit(1);
     }
 }
-void internal_handler(int sig, siginfo_t *siginfo, void *context) {
-    return;
-}
+// void internal_handler(int sig, siginfo_t *siginfo, void *context) {
+//     return;
+// }
 
-void kill_children(pid_t children_pid[], int num_of_children) {
-    set_signal_handler(SIGUSR1, internal_handler);    
+// void kill_children(pid_t children_pid[], int num_of_children) {
+//     set_signal_handler(SIGUSR1, internal_handler);    
     
-    for (int i = 0; i < num_of_children; i++) {
-        // send the signal to the child
-        printf("sending usr1 to child %d", children_pid[i]);
-        kill(children_pid[i], SIGUSR1);
-        // wait for root to tell you that is done
-        wait_signal_from_parent(internal_handler);
-    }
-}
+//     for (int i = 0; i < num_of_children; i++) {
+//         // send the signal to the child
+//         printf("sending usr1 to child %d", children_pid[i]);
+//         kill(children_pid[i], SIGUSR1);
+//         // wait for root to tell you that is done
+//         wait_signal_from_parent(internal_handler);
+//     }
+// }
 
 void parent_behaviour(pid_t children_pid[], int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
     internal_read_from_child(fd_board, num_of_children);
-    // we are done reading so we must send kill signals to all the children
-    // kill_children(children_pid, num_of_children);
 }
 
 void create_workers(int num_of_children, Range* ranges) {
@@ -59,6 +57,21 @@ void create_workers(int num_of_children, Range* ranges) {
             exit(1);
         }
 
+        if (fcntl(fd_board[i][WRITE],
+                  F_SETFL,
+                  fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0)
+            {
+                perror("fcntl");
+                exit(1);
+            }
+        if(fcntl(fd_board[i][READ],
+              F_SETFL,
+              fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0)
+            {
+                perror("fcntl");
+                exit(1);
+            }
+
         // create the child process
         pid_t child_pid = fork();
         if (child_pid == -1) {
@@ -73,13 +86,15 @@ void create_workers(int num_of_children, Range* ranges) {
         if (child_pid == 0) {
             // we first close the siblings' pipes
             close_sibl_pipes(fd_board, i, num_of_children);
-            // close the reading side of the pipe
+
+            // make sure that the child will print the out put to the pipe's write-end
             close(fd_board[i][READ]);   
             dup2(fd_board[i][WRITE], STDOUT_FILENO); 
             close(fd_board[i][WRITE]);            
             // create the arg list and execute the external node code
             char *args[] = {"./workers", "-l", ranges[i].l, "-u", ranges[i].u, "-algo", algo_index, "-rootpid", root_pid, (char *)0};
             child_behaviour(args);
+            exit(1);
         }
     }
     

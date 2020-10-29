@@ -10,10 +10,6 @@ static char *posible_algos[] = {
 int root_pid=-1;
 
 void worker_handler(int sig, siginfo_t *siginfo, void *context) {
-    // send a message to the root with the pid of the parent so the root allows it to keep going
-    const union sigval val = {getppid()};
-    if(sigqueue(root_pid, SIGUSR1, val) < 0)
-        perror("sigqueue");
     // exit process
     exit(0);
     
@@ -75,6 +71,21 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
+    if (fcntl(fd[WRITE],
+                  F_SETFL,
+                  fcntl(fd[WRITE], F_GETFL) | O_NONBLOCK) < 0)
+            {
+                perror("fcntl");
+                exit(1);
+            }
+        if(fcntl(fd[READ],
+              F_SETFL,
+              fcntl(fd[READ], F_GETFL) | O_NONBLOCK) < 0)
+            {
+                perror("fcntl");
+                exit(1);
+            }
+
     // close the pipe write-end for parent
     close(fd[WRITE]);
 
@@ -109,9 +120,9 @@ int main(int argc, char* argv[]) {
         perror(msg);
         exit(1);
     }
-
+    close(STDOUT_FILENO); // disconnect from stdout
     // ask parent to end stuff
-    // wait_signal_from_parent(worker_handler);
+    wait_signal_from(root_pid, SIGUSR1, worker_handler);
     
     exit(1);
 }

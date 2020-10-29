@@ -175,6 +175,7 @@ void use_input(int fd, PQ pq, float* max_time, float* min_time) {
             len = 0;
         }
     }
+    free(entry); // there is at least 1 byte still-reachable from the last else case in the for loop
 }
 
 void internal_read_from_child(int fd_array[][2], int number_of_children) {
@@ -190,6 +191,9 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
         fds[i].fd = fd_array[i][READ];
         fds[i].revents = 0;
     }
+    
+    // because poll might get interrupted we will ignore all usr1 signals
+    ignore_signal(SIGUSR1);
 
     while(open_files) {
         // call the poll syscall
@@ -218,7 +222,8 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
         visit_pair(pair);
         free(pair);
     }
-    if (has_active_children)
+
+    if (has_active_children) // if the children have actually wrote something
         printf(":%.1f::%.1f:\n", max_time, min_time);
     pq_destroy(pq);
 }
@@ -235,12 +240,30 @@ void set_signal_handler(int signo, void (*handler)(int, siginfo_t *, void *)) {
 	}
 }
 
-void wait_signal_from_parent(void (*handler)(int, siginfo_t *, void *)) {
-    printf("waiting %d", getpid());
+void ignore_signal(int signo) {
+    struct sigaction act;
+    memset(&act, '\0', sizeof(act));
+    act.sa_handler = SIG_IGN;
+    // set up signal handler 
+    if (sigaction(signo, &act, NULL) < 0) {
+		perror ("sigaction");
+		exit(1);
+	}
+}
+
+void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginfo_t *, void *)) {
     // set the signal handler
-    set_signal_handler(SIGUSR1, handler);
+    set_signal_handler(signo, handler);
     // wait for parents signal
-    pause();
+    int timeouts = 0;
+    while (timeouts < 5000) {
+        timeouts++;
+        const union sigval val = {getpid()}; // make sure the receiver knows who send the signal
+        if (sigqueue(receiver_pid, signo, val) < 0)
+            perror("sigqueue");
+
+        sleep(0.3);
+    }
 }
 
 // function to close all the pipes from unrelated to the IO siblings

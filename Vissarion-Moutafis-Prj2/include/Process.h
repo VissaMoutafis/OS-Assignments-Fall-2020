@@ -1,5 +1,6 @@
 #pragma once
 
+
 // standard include headers
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +32,7 @@ uint ch_proc_thresh;
 // define the read and write indexes, for pipe communication
 #define READ 0
 #define WRITE 1
-#define TIMEOUT 1
+#define TIMEOUT 2
 
 // function that creates children (different impl, same declaration)
 typedef void (*CreateChildren)(int num_of_children, Range* ranges);
@@ -45,7 +46,7 @@ void internal_node_behaviour(int argc, char *argv[], CreateChildren create_child
 // fd : file descriptor to perform reading
 void print_primes_from_child(int fd);
 
-// function for Async I/O between pipes
+// function for Async I/O between pipes (WARNING IT DISSAMBLES THE SINGAL HANDLER)
 void internal_read_from_child(int fd_array[][2], int number_of_children);
 
 // function to close the sibling pipes besides the current child-index
@@ -53,11 +54,12 @@ void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children);
 
 // signal utilities
 
-// function to wait a sigusr1 from the parent
-void wait_signal_from_parent(void (*handler)(int, siginfo_t *, void *));
+// function to send signo to the receiver till he gets it
+// set a handler for any signo signal received from the current process
+void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginfo_t *, void *));
 
 // easy to set signal handler (usign sigact)
 void set_signal_handler(int signo, void (*handler)(int, siginfo_t *, void *));
 
-// kill the children of the parent via a controlled way
-void kill_children(pid_t children_pid[], int num_of_children);
+// ignore the signal signo (set the handler SIG_IGN)
+void ignore_signal(int signo);
