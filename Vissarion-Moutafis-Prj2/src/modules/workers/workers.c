@@ -70,25 +70,19 @@ int main(int argc, char* argv[]) {
         perror("pipe");
         exit(1);
     }
-
-    if (fcntl(fd[WRITE],
-                  F_SETFL,
-                  fcntl(fd[WRITE], F_GETFL) | O_NONBLOCK) < 0)
-            {
-                perror("fcntl");
-                exit(1);
-            }
-        if(fcntl(fd[READ],
-              F_SETFL,
-              fcntl(fd[READ], F_GETFL) | O_NONBLOCK) < 0)
-            {
-                perror("fcntl");
-                exit(1);
-            }
-
+    
+    if (fcntl(fd[WRITE], F_SETFL, fcntl(fd[WRITE], F_GETFL) | O_NONBLOCK) < 0) {
+            perror("fcntl");
+            exit(1);
+        }
+    if(fcntl(fd[READ], F_SETFL, fcntl(fd[READ], F_GETFL) | O_NONBLOCK) < 0) {
+        perror("fcntl");
+        exit(1);
+    }
     // close the pipe write-end for parent
     close(fd[WRITE]);
 
+    // for the process that will execute
     pid_t child_pid = fork();
     if (child_pid == -1) {
         perror("fork");
@@ -99,19 +93,21 @@ int main(int argc, char* argv[]) {
         // child case
         
         // close the pipe read-end for child
-        close(fd[READ]);
+        close(fd[READ]);        
+        dup2(fd[WRITE], STDOUT_FILENO);
+        close(fd[WRITE]);
 
         // choose the algorithm
         char *bin_path = posible_algos[atoi(argv[6])];
         char *args[] = {bin_path, argv[2], argv[4], (char *)0};
-        dup2(fd[WRITE], STDOUT_FILENO);
-        close(fd[WRITE]);
         //execute the program
         if (execvp(bin_path, args) == -1) {
             perror("execvp()");
             exit(1);
         }
     }
+    
+
     read_from_child(&fd, 1);
     // wait for the child to end
     if ((child_pid = wait(NULL)) == -1) {

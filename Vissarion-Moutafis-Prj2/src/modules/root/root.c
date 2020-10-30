@@ -53,20 +53,10 @@ void create_internals(int num_of_children, Range* ranges) {
             exit(1);
         }
 
-        if (fcntl(fd_board[i][WRITE],
-                  F_SETFL,
-                  fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0)
-            {
-                perror("fcntl");
-                exit(1);
-            }
-        if(fcntl(fd_board[i][READ],
-              F_SETFL,
-              fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0)
-            {
-                perror("fcntl");
-                exit(1);
-            }
+        if(fcntl(fd_board[i][READ], F_SETFL, fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0) {
+            perror("fcntl");
+            exit(1);
+        }
 
         // create hte child process
         pid_t child_pid = fork();
@@ -81,11 +71,21 @@ void create_internals(int num_of_children, Range* ranges) {
             close_sibl_pipes(fd_board, i, num_of_children);
             
             // make sure that the child will print the out put to the pipe's write-end
-            close(fd_board[i][READ]);   
+            close(fd_board[i][READ]);
+            if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
+                perror("fcntl");
+                exit(1);
+            }
             dup2(fd_board[i][WRITE], STDOUT_FILENO); 
             close(fd_board[i][WRITE]); 
-
-            char* args[] = {"./internals", "-l", ranges[i].l, "-u", ranges[i].u, "-w", w, (char*)0};
+            char algo_index[5];
+            sprintf(algo_index, "%d", i*num_of_children);
+            char* args[] = {"./internals", 
+                            "-l", ranges[i].l, 
+                            "-u", ranges[i].u, 
+                            "-w", w, 
+                            "-i", algo_index, 
+                            (char*)0};
             child_behaviour(args);
         }
     }

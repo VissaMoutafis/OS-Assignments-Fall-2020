@@ -6,7 +6,7 @@
 #include "ParsingUtils.h"
 #include "Types.h"
 
-
+int algo_index = 0;
 
 void child_behaviour(char** args) {
     if (execvp("./workers", args) == -1) {
@@ -49,28 +49,20 @@ void create_workers(int num_of_children, Range* ranges) {
         children_pid[i] = -1;
 
     for (int i = 0; i < num_of_children; i++) {
-        char algo_index[5];
-        sprintf(algo_index, "%d", i%PRIME_ALGOS);
+        char algo[5];
+        sprintf(algo, "%d", algo_index%PRIME_ALGOS);
+        algo_index++;
         // create communication pipe
         if (pipe(fd_board[i]) == -1) {
             perror("pipe");
             exit(1);
         }
 
-        if (fcntl(fd_board[i][WRITE],
-                  F_SETFL,
-                  fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0)
-            {
-                perror("fcntl");
-                exit(1);
-            }
-        if(fcntl(fd_board[i][READ],
-              F_SETFL,
-              fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0)
-            {
-                perror("fcntl");
-                exit(1);
-            }
+        
+        if(fcntl(fd_board[i][READ], F_SETFL, fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0) {
+            perror("fcntl");
+            exit(1);
+        }
 
         // create the child process
         pid_t child_pid = fork();
@@ -89,10 +81,17 @@ void create_workers(int num_of_children, Range* ranges) {
 
             // make sure that the child will print the out put to the pipe's write-end
             close(fd_board[i][READ]);   
+            if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
+                perror("fcntl");
+                exit(1);
+            }
             dup2(fd_board[i][WRITE], STDOUT_FILENO); 
             close(fd_board[i][WRITE]);            
             // create the arg list and execute the external node code
-            char *args[] = {"./workers", "-l", ranges[i].l, "-u", ranges[i].u, "-algo", algo_index, "-rootpid", root_pid, (char *)0};
+            char *args[] = {"./workers", 
+                            "-l", ranges[i].l, 
+                            "-u", ranges[i].u, 
+                            "-algo", algo, "-rootpid", root_pid, (char *)0};
             child_behaviour(args);
             exit(1);
         }
@@ -105,7 +104,7 @@ void create_workers(int num_of_children, Range* ranges) {
 }
 
 static void check_args(int argc, char* argv[]) {
-    if (argc != 7) {
+    if (argc != 9) {
         fprintf(stderr, "Wrong input! ./internal -l min -u max -w num-of-children.\n");
         exit(1);
     }
@@ -118,8 +117,7 @@ static void check_args(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
     check_args(argc, argv);
-
+    algo_index = atoi(argv[8]);
     internal_node_behaviour(argc, argv, create_workers);
-
     exit(0);
 }
