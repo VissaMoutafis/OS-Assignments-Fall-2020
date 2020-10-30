@@ -18,18 +18,6 @@ void child_behaviour(char** args) {
 //     return;
 // }
 
-// void kill_children(pid_t children_pid[], int num_of_children) {
-//     set_signal_handler(SIGUSR1, internal_handler);    
-    
-//     for (int i = 0; i < num_of_children; i++) {
-//         // send the signal to the child
-//         printf("sending usr1 to child %d", children_pid[i]);
-//         kill(children_pid[i], SIGUSR1);
-//         // wait for root to tell you that is done
-//         wait_signal_from_parent(internal_handler);
-//     }
-// }
-
 void parent_behaviour(pid_t children_pid[], int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
     internal_read_from_child(fd_board, num_of_children);
@@ -57,8 +45,10 @@ void create_workers(int num_of_children, Range* ranges) {
             perror("pipe");
             exit(1);
         }
-
-        
+        if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
+            perror("fcntl");
+            exit(1);
+        }
         if(fcntl(fd_board[i][READ], F_SETFL, fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0) {
             perror("fcntl");
             exit(1);
@@ -81,10 +71,7 @@ void create_workers(int num_of_children, Range* ranges) {
 
             // make sure that the child will print the out put to the pipe's write-end
             close(fd_board[i][READ]);   
-            if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
-                perror("fcntl");
-                exit(1);
-            }
+            
             dup2(fd_board[i][WRITE], STDOUT_FILENO); 
             close(fd_board[i][WRITE]);            
             // create the arg list and execute the external node code
@@ -105,12 +92,12 @@ void create_workers(int num_of_children, Range* ranges) {
 
 static void check_args(int argc, char* argv[]) {
     if (argc != 9) {
-        fprintf(stderr, "Wrong input! ./internal -l min -u max -w num-of-children.\n");
+        fprintf(stderr, "Wrong input! ./internal -l min -u max -w num-of-children -i algo index.\n");
         exit(1);
     }
     
     if (atoi(argv[2]) > atoi(argv[4])) {
-        fprintf(stderr, "Wrong input! ./internal -l min -u max -w num-of-children.\n");
+        fprintf(stderr, "Wrong input! ./internal -l min -u max -w num-of-children -i algo index.\n");
         exit(1);
     }
 }

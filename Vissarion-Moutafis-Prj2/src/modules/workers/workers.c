@@ -48,7 +48,7 @@ void read_from_child(int fd_array[][2], int number_of_children) {
 
 static void check_args(int argc, char* argv[]) {
     if (argc != 9) {
-        fprintf(stderr, "Wrong input! ./workers -l min -u max -algo algo num\n");
+        fprintf(stderr, "Wrong input! ./workers -l min -u max -algo algo num -ripd root pid\n");
         exit(1);
     }
     if( !( is_numeric(argv[2]) && is_numeric(argv[4]) && is_numeric(argv[6]) && is_numeric(argv[8])) ) {
@@ -72,9 +72,9 @@ int main(int argc, char* argv[]) {
     }
     
     if (fcntl(fd[WRITE], F_SETFL, fcntl(fd[WRITE], F_GETFL) | O_NONBLOCK) < 0) {
-            perror("fcntl");
-            exit(1);
-        }
+        perror("fcntl");
+        exit(1);
+    }
     if(fcntl(fd[READ], F_SETFL, fcntl(fd[READ], F_GETFL) | O_NONBLOCK) < 0) {
         perror("fcntl");
         exit(1);
@@ -116,9 +116,8 @@ int main(int argc, char* argv[]) {
         perror(msg);
         exit(1);
     }
-    close(STDOUT_FILENO); // disconnect from stdout
     // ask parent to end stuff
-    wait_signal_from(root_pid, SIGUSR1, worker_handler);
+    // wait_signal_from(root_pid, SIGUSR1, worker_handler);
     
     exit(1);
 }

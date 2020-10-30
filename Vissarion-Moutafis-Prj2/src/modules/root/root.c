@@ -52,7 +52,10 @@ void create_internals(int num_of_children, Range* ranges) {
             perror("pipe()");
             exit(1);
         }
-
+        if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
+            perror("fcntl");
+            exit(1);
+        }
         if(fcntl(fd_board[i][READ], F_SETFL, fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0) {
             perror("fcntl");
             exit(1);
@@ -72,10 +75,6 @@ void create_internals(int num_of_children, Range* ranges) {
             
             // make sure that the child will print the out put to the pipe's write-end
             close(fd_board[i][READ]);
-            if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
-                perror("fcntl");
-                exit(1);
-            }
             dup2(fd_board[i][WRITE], STDOUT_FILENO); 
             close(fd_board[i][WRITE]); 
             char algo_index[5];

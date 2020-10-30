@@ -140,7 +140,7 @@ float get_timestamp(int fd) {
 void use_input(int fd, PQ pq, float* max_time, float* min_time) {
     char *entry = calloc(1, sizeof(char));
     int len = 0;
-    char buffer[1];
+    char buffer[2]={'\0','\0'};
     while(read(fd, buffer, 1) > 0) {
         if (strcmp(buffer, "\n") == 0)
             continue;
@@ -197,20 +197,24 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
 
     while(open_files) {
         // call the poll syscall
-        int retpoll = poll(fds, number_of_children, TIMEOUT);
+        int retpoll = poll(fds, number_of_children, -1);
 
         if (retpoll > 0) {
-            for (int i = 0; i < number_of_children; i++)
+            // if poll did not fail
+            for (int i = 0; i < number_of_children; i++) {
                 if (fds[i].fd != -1) {
-                    if (fds[i].revents & POLLIN) { // if the file descriptor is in the ready list
-                    
+                    // if the fd has something to read
+                    if (fds[i].revents & POLLIN) {
+                        // if the file descriptor is in the ready list
                         use_input(fds[i].fd, pq, &max_time, &min_time);
                         has_active_children = true;
-                    } else if (fds[i].revents & POLLHUP){
+                    }else if (fds[i].revents & POLLHUP){
+                        close(fds[i].fd);
                         fds[i].fd = -1;
                         open_files--;
                     }
                 }
+            }
         } else if (retpoll < 0) {
             perror("poll");
             exit(1);
@@ -225,6 +229,7 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
 
     if (has_active_children) // if the children have actually wrote something
         printf(":%.1f::%.1f:\n", max_time, min_time);
+    
     pq_destroy(pq);
 }
 
@@ -256,11 +261,11 @@ void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginf
     set_signal_handler(signo, handler);
     // wait for parents signal
     int timeouts = 0;
-    while (timeouts < 5000) {
+    while (timeouts < 500) {
         timeouts++;
         const union sigval val = {getpid()}; // make sure the receiver knows who send the signal
         if (sigqueue(receiver_pid, signo, val) < 0)
-            perror("sigqueue");
+            exit(1);
 
         sleep(0.3);
     }

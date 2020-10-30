@@ -19,7 +19,7 @@ INTERNALS = $(MODULES)/internal-processes
 
 ROOT = $(MODULES)/root
 
-CFLAGS += -I$(INCLUDE) -Wall -g3 -Werror
+CFLAGS += -I$(INCLUDE) -Wall -g3 -Werror -D_GNU_SOURCE
 
 OBJS =  
 
