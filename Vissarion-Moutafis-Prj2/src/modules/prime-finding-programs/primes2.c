@@ -48,10 +48,10 @@ int main(int argc, char *argv[]) {
         }
     }
     t2 = times(&tb2);
-    if (c) {
+    // if (c) {
         printf(":%.1f:", (float)(t2-t1)/(float)ticspersec);
         printf("\n");
-    }
+    // }
     fflush(stdout);
 
     return 0;

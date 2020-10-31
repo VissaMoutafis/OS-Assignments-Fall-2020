@@ -20,7 +20,19 @@ void root_handler (int sig, siginfo_t *siginfo, void *context) {
     }
 }
 
-void child_behaviour(char** args) {
+void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children) {
+    // we begin with some initializations
+
+    // we first close the siblings' pipes
+    close_sibl_pipes(fd_board, i, num_of_children);
+    // make write-end non blocking
+    make_fd_nonblock(fd_board[i][WRITE]);
+    // make sure that the child will print the out put to the pipe's write-end
+    close(fd_board[i][READ]);
+    //duplicate the write descriptor to stdout so we catch the result
+    dup2(fd_board[i][WRITE], STDOUT_FILENO);
+    close(fd_board[i][WRITE]);
+
     if (execvp("./internals", args) == -1) {
         perror("execvp()");
         exit(1);
@@ -28,11 +40,15 @@ void child_behaviour(char** args) {
 }
 
 void catch_usr1(int timeouts) {
-    timeouts = timeouts * timeouts;
+    timeouts = timeouts * timeouts* timeouts;
     int fails = 0;
     float sec_wait = 1.0;
-    while(timeouts-- && fails <= 10) {
+    while(timeouts--) {
         fails++;
+        if (fails > 10) {
+            sec_wait /= 1.5;
+            fails = 0;
+        }
         sleep(sec_wait);
     }
 }
@@ -52,16 +68,9 @@ void create_internals(int num_of_children, Range* ranges) {
             perror("pipe()");
             exit(1);
         }
-        if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
-            perror("fcntl");
-            exit(1);
-        }
-        if(fcntl(fd_board[i][READ], F_SETFL, fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0) {
-            perror("fcntl");
-            exit(1);
-        }
 
-        // create hte child process
+        make_fd_nonblock(fd_board[i][READ]);
+        // create the child process
         pid_t child_pid = fork();
         if (child_pid == -1) {
             perror("fork");
@@ -69,14 +78,8 @@ void create_internals(int num_of_children, Range* ranges) {
         }
 
         // if it's a child
-        if (child_pid == 0) {
-            // we first close the siblings' pipes
-            close_sibl_pipes(fd_board, i, num_of_children);
-            
-            // make sure that the child will print the out put to the pipe's write-end
-            close(fd_board[i][READ]);
-            dup2(fd_board[i][WRITE], STDOUT_FILENO); 
-            close(fd_board[i][WRITE]); 
+        if (child_pid == 0) { 
+            // set the algo index in a string
             char algo_index[5];
             sprintf(algo_index, "%d", i*num_of_children);
             char* args[] = {"./internals", 
@@ -85,7 +88,7 @@ void create_internals(int num_of_children, Range* ranges) {
                             "-w", w, 
                             "-i", algo_index, 
                             (char*)0};
-            child_behaviour(args);
+            child_behaviour(args, fd_board, i, num_of_children);
         }
     }
 

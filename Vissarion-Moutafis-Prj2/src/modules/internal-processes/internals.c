@@ -8,7 +8,16 @@
 
 int algo_index = 0;
 
-void child_behaviour(char** args) {
+void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children) {
+    // we first close the siblings' pipes
+    close_sibl_pipes(fd_board, i, num_of_children);
+    // make the write-end non blocking
+    make_fd_nonblock(fd_board[i][WRITE]);
+    // make sure that the child will print the out put to the pipe's write-end
+    close(fd_board[i][READ]);
+    // duplicate stdout so parent catch all the stuff the child writes
+    dup2(fd_board[i][WRITE], STDOUT_FILENO);
+    close(fd_board[i][WRITE]);
     if (execvp("./workers", args) == -1) {
         perror("execvp()");
         exit(1);
@@ -45,14 +54,7 @@ void create_workers(int num_of_children, Range* ranges) {
             perror("pipe");
             exit(1);
         }
-        if (fcntl(fd_board[i][WRITE], F_SETFL, fcntl(fd_board[i][WRITE], F_GETFL) | O_NONBLOCK) < 0) {
-            perror("fcntl");
-            exit(1);
-        }
-        if(fcntl(fd_board[i][READ], F_SETFL, fcntl(fd_board[i][READ], F_GETFL) | O_NONBLOCK) < 0) {
-            perror("fcntl");
-            exit(1);
-        }
+        make_fd_nonblock(fd_board[i][READ]);
 
         // create the child process
         pid_t child_pid = fork();
@@ -66,20 +68,13 @@ void create_workers(int num_of_children, Range* ranges) {
 
         // if it's a child
         if (child_pid == 0) {
-            // we first close the siblings' pipes
-            close_sibl_pipes(fd_board, i, num_of_children);
-
-            // make sure that the child will print the out put to the pipe's write-end
-            close(fd_board[i][READ]);   
-            
-            dup2(fd_board[i][WRITE], STDOUT_FILENO); 
-            close(fd_board[i][WRITE]);            
+                
             // create the arg list and execute the external node code
             char *args[] = {"./workers", 
                             "-l", ranges[i].l, 
                             "-u", ranges[i].u, 
                             "-algo", algo, "-rootpid", root_pid, (char *)0};
-            child_behaviour(args);
+            child_behaviour(args, fd_board, i, num_of_children);
             exit(1);
         }
     }

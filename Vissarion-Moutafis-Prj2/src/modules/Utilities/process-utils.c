@@ -3,6 +3,13 @@
 #include "ParsingUtils.h"
 #include "PQ.h"
 
+void make_fd_nonblock(int fd) {
+    if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK) < 0) {
+        perror("fcntl");
+        exit(1);
+    }
+}
+
 void wait_children(void) {
     int pid, status;
     while ((pid = wait(&status)) != -1) {
@@ -55,6 +62,7 @@ void print_primes_from_child(int fd) {
         }
 
         printf("%s", buffer); // print the buffer
+        fflush(stdout);
     }
 }
 
@@ -113,6 +121,7 @@ Pointer make_pair(char* str) {
 void visit_pair(Pointer p) {
     PrimePair a = (PrimePair)p;
     printf("%d,%.1f ", a->n, a->time);
+    fflush(stdout);
 }
 
 float get_timestamp(int fd) {
@@ -137,11 +146,16 @@ float get_timestamp(int fd) {
     return timestamp;
 }
 
-void use_input(int fd, PQ pq, float* max_time, float* min_time) {
+bool use_input(int fd, PQ pq, float* max_time, float* min_time) {
     char *entry = calloc(1, sizeof(char));
     int len = 0;
     char buffer[2]={'\0','\0'};
-    while(read(fd, buffer, 1) > 0) {
+    bool end_file = false;
+    while(read(fd, buffer, 1) > 0 && !end_file) {
+        if (strcmp(buffer, "$") == 0) {
+            end_file = true;
+            break;
+        }
         if (strcmp(buffer, "\n") == 0)
             continue;
 
@@ -176,6 +190,8 @@ void use_input(int fd, PQ pq, float* max_time, float* min_time) {
         }
     }
     free(entry); // there is at least 1 byte still-reachable from the last else case in the for loop
+
+    return end_file;
 }
 
 void internal_read_from_child(int fd_array[][2], int number_of_children) {
@@ -187,6 +203,7 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     int open_files = number_of_children;
     //set up the fds array
     for (int i = 0; i < number_of_children; i++) {
+        make_fd_nonblock(fd_array[i][READ]);
         fds[i].events = POLLIN;
         fds[i].fd = fd_array[i][READ];
         fds[i].revents = 0;
@@ -194,10 +211,11 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     
     // because poll might get interrupted we will ignore all usr1 signals
     ignore_signal(SIGUSR1);
-
+    bool end_file;
     while(open_files) {
+        sleep(1);
         // call the poll syscall
-        int retpoll = poll(fds, number_of_children, -1);
+        int retpoll = poll(fds, number_of_children, TIMEOUT);
 
         if (retpoll > 0) {
             // if poll did not fail
@@ -206,9 +224,10 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
                     // if the fd has something to read
                     if (fds[i].revents & POLLIN) {
                         // if the file descriptor is in the ready list
-                        use_input(fds[i].fd, pq, &max_time, &min_time);
+                        end_file = use_input(fds[i].fd, pq, &max_time, &min_time);
                         has_active_children = true;
-                    }else if (fds[i].revents & POLLHUP){
+                    }
+                    if (end_file){
                         close(fds[i].fd);
                         fds[i].fd = -1;
                         open_files--;
@@ -224,12 +243,12 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     while (!pq_empty(pq)) {
         Pointer pair = pq_pop(pq);
         visit_pair(pair);
+        fflush(stdout);
         free(pair);
     }
-
     if (has_active_children) // if the children have actually wrote something
-        printf(":%.1f::%.1f:\n", max_time, min_time);
-    
+        printf(":%.1f::%.1f:$\n", max_time, min_time);
+    fflush(stdout);
     pq_destroy(pq);
 }
 
@@ -261,13 +280,13 @@ void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginf
     set_signal_handler(signo, handler);
     // wait for parents signal
     int timeouts = 0;
-    while (timeouts < 500) {
+    while (timeouts < 5000) {
         timeouts++;
         const union sigval val = {getpid()}; // make sure the receiver knows who send the signal
         if (sigqueue(receiver_pid, signo, val) < 0)
             exit(1);
 
-        sleep(0.3);
+        sleep(0.73);
     }
 }
 

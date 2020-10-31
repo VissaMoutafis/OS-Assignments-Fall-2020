@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <poll.h>
+#include <sys/epoll.h>
 #include <sys/errno.h>
 #include <stdbool.h>
 #include <syscall.h>
@@ -41,6 +42,9 @@ void wait_children(void);
 
 // internal processes behaviour (root and internal process nodes)
 void internal_node_behaviour(int argc, char *argv[], CreateChildren create_children);
+
+// make a blocking descriptor non blocking
+void make_fd_nonblock(int fd);
 
 // fd : file descriptor to perform reading
 void print_primes_from_child(int fd);
