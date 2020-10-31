@@ -12,11 +12,13 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
     // we first close the siblings' pipes
     close_sibl_pipes(fd_board, i, num_of_children);
     // make the write-end non blocking
-    make_fd_nonblock(fd_board[i][WRITE]);
     // make sure that the child will print the out put to the pipe's write-end
     close(fd_board[i][READ]);
     // duplicate stdout so parent catch all the stuff the child writes
-    dup2(fd_board[i][WRITE], STDOUT_FILENO);
+    if (dup2(fd_board[i][WRITE], STDOUT_FILENO) == -1) {
+        perror("dup2 in internal processes");
+        exit(1);
+    }
     close(fd_board[i][WRITE]);
     if (execvp("./workers", args) == -1) {
         perror("execvp()");
@@ -54,7 +56,6 @@ void create_workers(int num_of_children, Range* ranges) {
             perror("pipe");
             exit(1);
         }
-        make_fd_nonblock(fd_board[i][READ]);
 
         // create the child process
         pid_t child_pid = fork();

@@ -3,13 +3,6 @@
 #include "ParsingUtils.h"
 #include "PQ.h"
 
-void make_fd_nonblock(int fd) {
-    if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK) < 0) {
-        perror("fcntl");
-        exit(1);
-    }
-}
-
 void wait_children(void) {
     int pid, status;
     while ((pid = wait(&status)) != -1) {
@@ -43,7 +36,6 @@ static Range* divide_ranges(int n, int low, int high, int*size) {
         // update the range limits
         start = end + 1;
         end = (start + range_length) > high ? high : (start + range_length);
-        // printf("Range: [%s, %s]\n", r.l, r.u);
     } while (start != high+1);
 
     return range_board;
@@ -52,17 +44,13 @@ static Range* divide_ranges(int n, int low, int high, int*size) {
 void print_primes_from_child(int fd) {
     char buffer[BUFSIZ];
     ssize_t error;
-    while((error = read(fd, buffer, BUFSIZ)) != 0) {
-        // read till the end of the file
-        
-        if (error == -1) {
-            //something caused an error in the reading execution
-            perror("read()");
-            exit(1);
-        }
-
-        printf("%s", buffer); // print the buffer
+    if((error = read(fd, buffer, BUFSIZ)) != 0) {
+        write(STDOUT_FILENO, buffer, strlen(buffer)); // print the buffer
         fflush(stdout);
+    } else if (error == -1) {
+        //something caused an error in the reading execution
+        perror("read()");
+        exit(1);
     }
 }
 
@@ -70,12 +58,10 @@ void internal_node_behaviour(int argc, char* argv[], CreateChildren create_child
     // number of children processes
     int num_of_children = 0;
     num_of_children = atoi(argv[6]);
-    
     // create the ranges that the workers will search for primes
     int size;
     Range *ranges = divide_ranges(num_of_children, atoi(argv[2]), atoi(argv[4]), &size);
     num_of_children = num_of_children > size ? size : num_of_children;  
-    
     if (num_of_children > 0)
         create_children(num_of_children, ranges);
 
@@ -119,17 +105,20 @@ Pointer make_pair(char* str) {
 }
 
 void visit_pair(Pointer p) {
+    char buf[BUFSIZ];
     PrimePair a = (PrimePair)p;
-    printf("%d,%.1f ", a->n, a->time);
+    sprintf(buf, "%d,%.1f ", a->n, a->time);
+    write(STDOUT_FILENO, buf, strlen(buf));
     fflush(stdout);
 }
 
 float get_timestamp(int fd) {
-    char buffer[2]="";
+    char buffer[2];
     char *entry = calloc(1, sizeof(char));
     int len = 0;
 
     while (read(fd, buffer, 1) > 0) {
+        buffer[1] = '\0';
         if (strcmp(buffer, ":") == 0)
             break;
 
@@ -152,9 +141,9 @@ bool use_input(int fd, PQ pq, float* max_time, float* min_time) {
     char buffer[2]={'\0','\0'};
     bool end_file = false;
     while(read(fd, buffer, 1) > 0 && !end_file) {
+        buffer[1] = '\0';
         if (strcmp(buffer, "$") == 0) {
             end_file = true;
-            break;
         }
         if (strcmp(buffer, "\n") == 0)
             continue;
@@ -168,19 +157,18 @@ bool use_input(int fd, PQ pq, float* max_time, float* min_time) {
             if ((t - (*max_time)) >= 0.1){            
                 *max_time = t;
             }
-        }
-
-        // build the number
-        if (strcmp(buffer, " ") != 0) {
+        } else if (strcmp(buffer, " ") != 0) {
+            // build the number
             // we add an extra digit to the pqueue
             char *new_entry = calloc(++len + 1, sizeof(char));
             strcpy(new_entry, entry);
             free(entry);
             new_entry[len - 1] = buffer[0];
             entry = new_entry;
-        } else {
+        } else if (len>0) {
             // we reached the end of a pair string
             // add the pair to the pqueue
+            // perror(entry);
             pq_push(pq, make_pair(entry));
             // free the reserved memory since the string is no longer needed
             free(entry);
@@ -203,7 +191,6 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     int open_files = number_of_children;
     //set up the fds array
     for (int i = 0; i < number_of_children; i++) {
-        make_fd_nonblock(fd_array[i][READ]);
         fds[i].events = POLLIN;
         fds[i].fd = fd_array[i][READ];
         fds[i].revents = 0;
@@ -211,9 +198,10 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     
     // because poll might get interrupted we will ignore all usr1 signals
     ignore_signal(SIGUSR1);
-    bool end_file;
+    // volatile sig_atomic_t end_file;
     while(open_files) {
-        sleep(1);
+        // end_file = 0; // test if a file has reached to an end case
+
         // call the poll syscall
         int retpoll = poll(fds, number_of_children, TIMEOUT);
 
@@ -224,11 +212,10 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
                     // if the fd has something to read
                     if (fds[i].revents & POLLIN) {
                         // if the file descriptor is in the ready list
-                        end_file = use_input(fds[i].fd, pq, &max_time, &min_time);
+                        use_input(fds[i].fd, pq, &max_time, &min_time);
                         has_active_children = true;
                     }
-                    if (end_file){
-                        close(fds[i].fd);
+                    if (fds[i].revents == POLLHUP){
                         fds[i].fd = -1;
                         open_files--;
                     }
@@ -246,8 +233,11 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
         fflush(stdout);
         free(pair);
     }
-    if (has_active_children) // if the children have actually wrote something
-        printf(":%.1f::%.1f:$\n", max_time, min_time);
+    if (has_active_children){ // if the children have actually wrote something
+        char buf[BUFSIZ];
+        sprintf(buf, ":%.1f::%.1f:$\n", max_time, min_time);
+        write(STDOUT_FILENO, buf, strlen(buf));
+    }
     fflush(stdout);
     pq_destroy(pq);
 }

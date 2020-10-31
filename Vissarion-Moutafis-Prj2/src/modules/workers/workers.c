@@ -116,9 +116,10 @@ int main(int argc, char* argv[]) {
         perror(msg);
         exit(1);
     }
-    printf("$");
+    char b[2] = "$";
+    write(STDOUT_FILENO, b, 2);
     // ask parent to end stuff
     wait_signal_from(root_pid, SIGUSR1, worker_handler);
     
-    exit(1);
+    exit(0);
 }

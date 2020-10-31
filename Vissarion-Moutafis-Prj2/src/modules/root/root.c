@@ -14,7 +14,7 @@ void root_handler (int sig, siginfo_t *siginfo, void *context) {
     volatile sig_atomic_t pid = siginfo->si_value.sival_int;
     if (pids_visited[pid%(n*n)] == 0){
         signals_encountered++;
-        printf("Caught %d\n", pid);
+        // printf("Caught %d\n", pid);
         pids_visited[pid%(n*n)] = 1;
         kill(pid, SIGUSR1);
     }
@@ -25,12 +25,13 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
 
     // we first close the siblings' pipes
     close_sibl_pipes(fd_board, i, num_of_children);
-    // make write-end non blocking
-    make_fd_nonblock(fd_board[i][WRITE]);
     // make sure that the child will print the out put to the pipe's write-end
     close(fd_board[i][READ]);
     //duplicate the write descriptor to stdout so we catch the result
-    dup2(fd_board[i][WRITE], STDOUT_FILENO);
+    if (dup2(fd_board[i][WRITE], STDOUT_FILENO) == -1) {
+        perror("dup2 in root");
+        exit(1);
+    }
     close(fd_board[i][WRITE]);
 
     if (execvp("./internals", args) == -1) {
@@ -69,7 +70,6 @@ void create_internals(int num_of_children, Range* ranges) {
             exit(1);
         }
 
-        make_fd_nonblock(fd_board[i][READ]);
         // create the child process
         pid_t child_pid = fork();
         if (child_pid == -1) {
