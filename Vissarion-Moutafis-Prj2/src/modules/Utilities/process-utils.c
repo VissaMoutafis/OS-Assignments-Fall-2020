@@ -235,7 +235,7 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     }
     if (has_active_children){ // if the children have actually wrote something
         char buf[BUFSIZ];
-        sprintf(buf, ":%.1f::%.1f:$\n", max_time, min_time);
+        sprintf(buf, ":%.1f::%.1f:\n", max_time, min_time);
         write(STDOUT_FILENO, buf, strlen(buf));
     }
     fflush(stdout);
