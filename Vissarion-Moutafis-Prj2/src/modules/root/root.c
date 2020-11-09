@@ -13,7 +13,7 @@ sig_atomic_t *pids_visited;
 void root_handler (int sig, siginfo_t *siginfo, void *context) {
     volatile sig_atomic_t pid = siginfo->si_value.sival_int;
     if (pids_visited[pid%(n*n)] == 0){
-        signals_encountered++;
+        signals_encountered = signals_encountered + 1;
         // printf("Caught %d\n", pid);
         pids_visited[pid%(n*n)] = 1;
         kill(pid, SIGUSR1);
@@ -41,24 +41,17 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
 }
 
 void catch_usr1(int timeouts) {
-    timeouts = timeouts * timeouts* timeouts;
-    int fails = 0;
-    float sec_wait = 1.0;
-    while(timeouts--) {
-        fails++;
-        if (fails > 10) {
-            sec_wait /= 1.5;
-            fails = 0;
-        }
-        sleep(sec_wait);
+    // float sec_wait = 0.7;
+    while(signals_encountered < timeouts*timeouts-2){
     }
 }
 
 void parent_behaviour(int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
-    catch_usr1(num_of_children);
+    // catch_usr1(num_of_children);
     internal_read_from_child(fd_board, num_of_children);
     set_signal_handler(SIGUSR1, root_handler);
+    // catch_usr1(num_of_children);
 }
 
 void create_internals(int num_of_children, Range* ranges) {

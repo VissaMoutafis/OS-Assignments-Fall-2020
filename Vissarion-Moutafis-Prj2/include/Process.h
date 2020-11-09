@@ -1,3 +1,7 @@
+/*
+** Implemented by Vissarion Moutafis
+*/
+
 #pragma once
 
 // standard include headers
@@ -8,9 +12,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <poll.h>
+#include <sys/signalfd.h>
 #include <sys/epoll.h>
 #include <sys/errno.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <syscall.h>
 #include <signal.h>

@@ -1,3 +1,7 @@
+/*
+** Implemented by Vissarion Moutafis
+*/
+
 #include "PQ.h"
 #include <stdio.h>
 struct pq {

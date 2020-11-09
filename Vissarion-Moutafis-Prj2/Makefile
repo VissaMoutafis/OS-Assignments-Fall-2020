@@ -24,16 +24,20 @@ CFLAGS += -I$(INCLUDE) -Wall -g3 -Werror -D_GNU_SOURCE
 OBJS =  
 
 # if you wanna add command line args un-comment the line below
-ARGS = -l 1 -u 10 -w 3
+ARGS = -l 1 -u 100 -w 3
 
 include $(MODULES)/modules.inc
 
-$(PROGRAM) : $(OBJS) root internals workers prime-finding-programs $(SRC)/main.o
+$(PROGRAM) : $(OBJS) root internals workers primes1 primes2 primes3 $(SRC)/main.o
 	$(CC) $(CFLAGS) $(OBJS) $(SRC)/main.o -o $(PROGRAM)
 
-prime-finding-programs: $(PRIME-FINDING-PROGS)/primes1.o $(PRIME-FINDING-PROGS)/primes2.o $(PRIME-FINDING-PROGS)/primes3.o
+primes1: $(PRIME-FINDING-PROGS)/primes1.o
 	$(CC) $(PRIME-FINDING-PROGS)/primes1.o -lm -o primes1
+
+primes2: $(PRIME-FINDING-PROGS)/primes2.o
 	$(CC) $(PRIME-FINDING-PROGS)/primes2.o -lm -o primes2
+
+primes3: $(PRIME-FINDING-PROGS)/primes3.o
 	$(CC) $(PRIME-FINDING-PROGS)/primes3.o -lm -o primes3
 
 workers: $(WORKERS)/workers.o $(OBJS)

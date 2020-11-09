@@ -1,3 +1,7 @@
+/*
+** Implemented by Vissarion Moutafis
+*/
+
 #include <limits.h>
 #include "Process.h"
 #include "ParsingUtils.h"
@@ -135,16 +139,13 @@ float get_timestamp(int fd) {
     return timestamp;
 }
 
-bool use_input(int fd, PQ pq, float* max_time, float* min_time) {
+void use_input(int fd, PQ pq, float* max_time, float* min_time) {
     char *entry = calloc(1, sizeof(char));
     int len = 0;
     char buffer[2]={'\0','\0'};
-    bool end_file = false;
-    while(read(fd, buffer, 1) > 0 && !end_file) {
+    while(read(fd, buffer, 1) > 0) {
         buffer[1] = '\0';
-        if (strcmp(buffer, "$") == 0) {
-            end_file = true;
-        }
+
         if (strcmp(buffer, "\n") == 0)
             continue;
 
@@ -168,7 +169,6 @@ bool use_input(int fd, PQ pq, float* max_time, float* min_time) {
         } else if (len>0) {
             // we reached the end of a pair string
             // add the pair to the pqueue
-            // perror(entry);
             pq_push(pq, make_pair(entry));
             // free the reserved memory since the string is no longer needed
             free(entry);
@@ -179,7 +179,6 @@ bool use_input(int fd, PQ pq, float* max_time, float* min_time) {
     }
     free(entry); // there is at least 1 byte still-reachable from the last else case in the for loop
 
-    return end_file;
 }
 
 void internal_read_from_child(int fd_array[][2], int number_of_children) {
@@ -197,13 +196,10 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
     }
     
     // because poll might get interrupted we will ignore all usr1 signals
-    ignore_signal(SIGUSR1);
-    // volatile sig_atomic_t end_file;
+    // ignore_signal(SIGUSR1);
     while(open_files) {
-        // end_file = 0; // test if a file has reached to an end case
-
         // call the poll syscall
-        int retpoll = poll(fds, number_of_children, TIMEOUT);
+        int retpoll = poll(fds, number_of_children, 0);
 
         if (retpoll > 0) {
             // if poll did not fail
@@ -222,8 +218,8 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
                 }
             }
         } else if (retpoll < 0) {
-            perror("poll");
-            exit(1);
+            // perror("poll");
+            // exit(1);
         }
     }
 
@@ -243,12 +239,23 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
 }
 
 void set_signal_handler(int signo, void (*handler)(int, siginfo_t *, void *)) {
+    // make the block set for sigaction 
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR1);
+
     struct sigaction act;
+    // initialize the struct
     memset(&act, '\0', sizeof(act));
     act.sa_sigaction = handler;
-    act.sa_flags = SA_SIGINFO;
+    // we will use the sa_sigaction handler and 
+    // we want the syscall to restart after interruption
+    act.sa_flags = SA_SIGINFO | SA_RESTART;
+    act.sa_mask = set;
+
     // set up signal handler 
     if (sigaction(signo, &act, NULL) < 0) {
+        // sigaction failed
 		perror ("sigaction");
 		exit(1);
 	}
@@ -269,15 +276,19 @@ void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginf
     // set the signal handler
     set_signal_handler(signo, handler);
     // wait for parents signal
-    int timeouts = 0;
-    while (timeouts < 5000) {
-        timeouts++;
+    // int timeouts = 0;
+    // float time = 0.7;
+    // float thresh = (float)(getpid()%100)/100.0;
+    // while (timeouts < 10) {
+        // timeouts++;
         const union sigval val = {getpid()}; // make sure the receiver knows who send the signal
-        if (sigqueue(receiver_pid, signo, val) < 0)
+        if (sigqueue(receiver_pid, signo, val) < 0){
+            perror("sigqueue");
             exit(1);
-
-        sleep(0.73);
-    }
+        }
+        // time = time > thresh ? 0 : (time + 0.3);
+        // sleep(time);
+    // }
 }
 
 // function to close all the pipes from unrelated to the IO siblings
