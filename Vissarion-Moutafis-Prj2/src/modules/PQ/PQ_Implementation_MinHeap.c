@@ -27,6 +27,16 @@ PQNode new_node(Pointer entry, PQNode right, PQNode left, PQNode parent) {
 
     return node;
 }
+static void rec_tree_destroy(PQNode root, ItemDestructor itemdestructor) {
+    if (root == PQ_EOF)
+        return;
+    
+    rec_tree_destroy(root->left);
+    rec_tree_destroy(root->right);
+    if (itemdestructor)
+        itemdestructor(root->entry);
+    free(root);
+}
 // interchange the entries of the 2 nodes
 static void exchange_nodes_entries(PQNode n1, PQNode n2) {
     Pointer tmp = n1->entry;
@@ -45,11 +55,13 @@ static PQNode get_min_node(PQNode n1, PQNode n2, Compare cmp) {
 }
 
 static bool is_left_child(PQNode node) {
+    assert(node);
     PQNode parent = node->parent;
     return parent && parent->left == node;
 }
 
 static bool is_right_child(PQNode node) {
+    assert(node);
     PQNode parent = node->parent;
     return parent && parent->right == node;
 }
@@ -63,51 +75,117 @@ static void insert_new_level(PQ pq, PQNode newnode) {
     cur->left = newnode;
 }
 
+static PQNode find_rightmost_leaf(PQ pq) {
+    assert(pq);
+    PQNode cur = pq->head;
+    assert(cur);
+    while (cur->right)
+        cur = cur->right;
+
+    return cur;
+}
+
 // add a node to the end of the heap
 static void add_last(PQ pq, Pointer entry) {
     PQNode newnode = new_node(entry, PQ_EOF, PQ_EOF, PQ_EOF);
     PQNode last = pq->last_node;
-    pq->last_node = newnode;
 
-    if (last == PQ_EOF) {
+    pq->last_node = newnode; // unique assignment so we don't bother later 
+
+    if (last == PQ_EOF)
         // the tree is empty
         pq->head = newnode;
-    } else if (last == pq->head) {
+    else if (last == pq->head)
         // case that tree hash only one node
         pq->head->left = newnode;
-    } else {
+    else {
         // it's a leaf, not the root (it's got a parent)
         if (is_left_child(last)) {
             last->parent->right = newnode;
         } else {
             PQNode parent = last->parent;
-            while (parent->parent && is_right_child(parent)) {
+            while (is_right_child(parent))
                 // while the parent is the right child and it has a parent
                 parent = parent->parent; // set the parent pointer to be it's father
-            }
-            
+
+            assert(parent);
+
             if (parent == pq->head)
                 insert_new_level(pq, newnode);
-            else
+            else {
                 parent = parent->parent->right;
             
-            while (parent->right) {
-                parent = parent->left;
+                while (parent->left && parent->right)
+                    parent = parent->left;
+
+                // at this point the parent points to the actual parent of the last node
+                // if the left child is empty then instert the node there else insert right
+                if (parent->left == PQ_EOF)
+                    parent->left = newnode;
+                else
+                    parent->right = newnode;
             }
-            // at this point the parent points to the actual parent of the last node
-            // if the left child is empty then instert the node there else insert right
-            if (parent->left == PQ_EOF) {
-                parent->left = newnode;
-            } else {
-                parent->right = newnode;
+        }
+    }
+}
+
+// remove the last node of the heap
+static void remove_last(PQ pq) {
+    // we need to remove the last node and then set a new node as the last one of the min-heap
+    PQNode last = pq->last_node;
+
+    //firstly we must find the new last node
+    if (last == PQ_EOF) 
+        // case that the last node is null => the tree is empty so we don't need to do anything
+        return;
+    else if (last == pq->head)
+        // case that the last node is the root
+        pq->head = pq->last_node = NULL;
+    else {
+        // At this point the last node is a lead that is
+        // neither the root nor a null value
+        
+        // first case : the last node is a right child => cure: set the left sibling as the last node
+        assert(last->parent);
+        assert(last);
+        if (is_right_child(last))
+            pq->last_node = last->parent;
+        else {
+            // the last node is a left sibling
+            // in this case we must travel to the next right last node
+            PQNode parent = last->parent;
+            while (is_left_child(parent))
+                parent = parent->parent;
+            
+            assert(parent);
+
+            if (parent == pq->head)
+                // if we reached all the way to the top
+                pq->last_node = find_rightmost_leaf(pq);
+            else {
+                PQNode new_last;
+                new_last = parent->parent->left;
+
+                while (new_last->right)
+                    new_last = new_last->right;
+                
+                // MUST: THERE IS A LEFT CHILD SO THE TREE IS ACTUALLY COMPLETE
+                assert(new_last->left);
+
+                pq->last_node = new_last;
             }
         }
     }
 
-}
-// remove the last node of the heap
-static void remove_last(PQ pq) {
+    // Now we dettach the last node
+    if (last->parent) {
+        if (is_right_child(last))
+            last->parent->right = PQ_EOF;
+        else 
+            last->parent->left = PQ_EOF;
+    }
 
+    free(last);
 }
 
 static void heapify_up(PQ pq) {
@@ -125,13 +203,6 @@ static void heapify_up(PQ pq) {
 }
 
 static void heapify_down(PQ pq) {
-    // we will make last node the root of the min-heap
-    PQNode last = pq->last_node;
-    exchange_nodes_entries(pq->head, last);
-    
-    // remove the last node since it is not needed
-    remove_last(pq);
-
     // perform heapify down
     PQNode node = pq->head, cur = get_min_node(pq->head->left, pq->head->right, pq->compare);
 
@@ -171,11 +242,16 @@ Pointer pq_pop(PQ pq) {
     PQNode min_node = pq->head;
     Pointer min_entry = min_node->entry;
 
-    // call heapify up to re sort the heap
+    // interchange the last and top node
+    PQNode last = pq->last_node;
+    exchange_nodes_entries(pq->head, last);
+    // remove the last node since it is not needed
+    remove_last(pq);
+
+    // call heapify up to re sort the heap, since the root is the only node not 
+    // fullfiling the heap feature
     heapify_down(pq);
 
-    //free the previous head
-    free(min_node);
     // and return the min value to the caller
     return min_entry;
 }
@@ -188,7 +264,8 @@ bool pq_empty(PQ pq) {
 
 // deallocate the memory blocks that pq holds
 void pq_destroy(PQ pq) {
-
+    rec_tree_destroy(pq->head, pq->itemDestructor);
+    free(pq);
 }
 
 // Utilities
