@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Types.h"
 #include "PQ.h"
-#define TEST_SIZE 100
+#define TEST_SIZE 10
 
 void* make_int(int a) {
     int* _a = malloc(sizeof(int));
@@ -23,6 +23,7 @@ int main(void) {
     for (int i = 0; i < TEST_SIZE; i++)
         pq_push(pq, make_int(TEST_SIZE-i));
 
+    printpq(pq);
     while(!pq_empty(pq)) {
         Pointer p = pq_pop(pq);
         printf("%d ", *((int*)p));

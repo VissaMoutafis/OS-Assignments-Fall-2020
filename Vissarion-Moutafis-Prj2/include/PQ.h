@@ -29,3 +29,5 @@ void pq_destroy(PQ pq);
 void pq_set_destructor(PQ pq, ItemDestructor new_destructor);
 
 ItemDestructor pq_get_destructor(PQ pq);
+
+void printpq(PQ pq);
