@@ -50,7 +50,13 @@ root: $(ROOT)/root.o $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(ROOT)/root.o -o root
 
 clean :
-	rm -rf ./$(PROGRAM) $(OBJS) ./primes* ./workers ./root ./internals
+	rm -rf ./$(PROGRAM) $(OBJS) $(PRIME-FINDING-PROGS)/primes1.o \
+	$(PRIME-FINDING-PROGS)/primes2.o $(PRIME-FINDING-PROGS)/primes3.o \
+	$(OBJS) $(WORKERS)/workers.o \
+	$(INTERNALS)/internals.o \
+	$(ROOT)/root.o \
+	$(SRC)/main.o \
+	./primes* ./workers ./root ./internals
 
 run : $(PROGRAM)
 	./$(PROGRAM) $(ARGS)
