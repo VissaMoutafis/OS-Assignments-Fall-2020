@@ -116,3 +116,14 @@ char* num_to_str(int num) {
 
     return str;
 }
+
+int get_len_of_int(int num) {
+    // this function will find the length of integers given
+    int cnt = 0;
+    while (num) {
+        cnt++;
+        num /= 10;
+    }
+
+    return cnt;
+}

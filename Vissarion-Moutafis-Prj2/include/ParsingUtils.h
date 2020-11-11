@@ -14,7 +14,7 @@ size_t fget_lines(char *filename);                          // get the #lines of
 char **parse_line(char *data_str, int *columns, char *sep); // classic line parser (mush alike python's str.split)
 bool is_numeric(char *str);                                 // check if the string is numeric
 char *num_to_str(int num);                                  // int -> string
-
+int get_len_of_int(int num);                                // get the number of digits an integer has
 // // Argument Parsing Tool:
 // // pass the argc, argv from main function call
 // // input: the string array the result will be returned (size: input_size)

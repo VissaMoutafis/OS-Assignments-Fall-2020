@@ -181,6 +181,74 @@ void use_input(int fd, PQ pq, float* max_time, float* min_time) {
 
 }
 
+static void write_batch(char** batch, int* size, int batch_size) {
+    int bytes_to_write = *size;
+    char* buf = *batch;
+    if(write(STDOUT_FILENO, buf, bytes_to_write) == -1) {
+        perror("writting the buffer");
+        exit(1);
+    }
+
+    // Now that we wrote the buffer we need to reset it
+    memset(*batch, '\0', batch_size);
+    (*size) = 0;
+}
+
+static void send_batched_messages(void *messages) {
+    PQ pq = *((PQ*)messages); // the messages are given in a priority queue
+    int batch_len = BATCHSIZE;
+    char *batch = calloc(batch_len, sizeof(char));
+
+    // set a variable to count how many chars the batch-buffer contains
+    int size = 0;
+
+    // start batching till the pq is empty
+    while (!pq_empty(pq)) {
+        // pop one pair from the pq
+        PrimePair pair = (PrimePair)pq_pop(pq); 
+
+        // the length of timestamp is 3 digits with the '.' 
+        // for the integer call the relative utility
+        // + 1 for the comma ',' character between +1 for the space char
+        int len = 3 + 1 + get_len_of_int(pair->n) + 1;
+        // make the buffer
+        char buf[len+1]; 
+        // copy the string
+        sprintf(buf, "%d,%.1f ", pair->n, pair->time);
+        buf[len]='\0';
+
+        // if the buffer's length is longer than the actual batch's length then change it
+        if (len > batch_len){
+            // first write to the output file what is left in the batch
+            write_batch(&batch, &size, batch_len);
+            // change the batch_len
+            batch_len = len+1;
+            // free the old memory and allocate new (initialized to 0)
+            free(batch);
+            batch = calloc(batch_len, sizeof(char));
+        }
+
+        // if the size + length of the buffer surpasses the length of the batch
+        if (size + len >= batch_len) {
+            // at this point we have to write the buffer to stdout
+            write_batch(&batch, &size, batch_len);
+        }
+
+        // copy to the end of the previous batched buffer the new buffer entry
+        strncpy(&batch[size], buf, len);
+        // increase size
+        size = size + len;
+        // free the memory from the pair
+        free(pair);
+    } 
+
+    // if there is anything left on the batch write it down
+    if (size)
+        write_batch(&batch, &size, batch_len);
+    // de-allocate the memory of the batch
+    free(batch);
+}
+
 void internal_read_from_child(int fd_array[][2], int number_of_children) {
     // make a pq to print the children sorted
     PQ pq = pq_create(compare_pair, free);
@@ -218,17 +286,14 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
                 }
             }
         } else if (retpoll < 0) {
+            // for debbuging reasons 
             // perror("poll");
             // exit(1);
         }
     }
 
-    while (!pq_empty(pq)) {
-        Pointer pair = pq_pop(pq);
-        visit_pair(pair);
-        fflush(stdout);
-        free(pair);
-    }
+    send_batched_messages(&pq);
+    
     if (has_active_children){ // if the children have actually wrote something
         char buf[BUFSIZ];
         sprintf(buf, ":%.1f::%.1f:\n", max_time, min_time);
