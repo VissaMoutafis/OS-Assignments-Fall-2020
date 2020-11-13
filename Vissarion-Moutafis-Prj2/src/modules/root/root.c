@@ -6,7 +6,7 @@
 #include "Types.h"
 
 char* w;
-int n;
+int n, l, u;
 volatile sig_atomic_t signals_encountered = 0;
 sig_atomic_t *pids_visited;
 
@@ -49,7 +49,10 @@ void catch_usr1(int timeouts) {
 void parent_behaviour(int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
     // catch_usr1(num_of_children);
-    internal_read_from_child(fd_board, num_of_children);
+    char buf[BUFSIZ];
+    sprintf(buf, "Primes in [%d, %d] are: ", l, u);
+    write(STDOUT_FILENO, buf, strlen(buf));
+    internal_read_from_child(fd_board, num_of_children, root);
     set_signal_handler(SIGUSR1, root_handler);
     // catch_usr1(num_of_children);
 }
@@ -109,15 +112,16 @@ int main(int argc, char* argv[]) {
     w = argv[6];
     
     n = atoi(w);
+    l = atoi(argv[2]);
+    u = atoi(argv[4]);
     pids_visited = calloc(n*n, sizeof(int)); // max amount of different signals are n*n
     
     for (int i = 0; i < n*n; i++)
         pids_visited[i] = 0;
     
-    printf("\nPID %d\n", getpid());
     internal_node_behaviour(argc, argv, create_internals);
     
-    printf("Total SIGUSR1 signals received: %d\n", signals_encountered);
+    printf("Num of SIGUSR1 Received: %d/%d\n", signals_encountered,n*n);
     free(pids_visited);
     exit(0);
 }

@@ -20,7 +20,7 @@ void worker_handler(int sig, siginfo_t *siginfo, void *context) {
 }
 
 static void check_args(int argc, char* argv[]) {
-    if (argc != 9) {
+    if (argc != 10) {
         fprintf(stderr, "Wrong input! ./workers -l min -u max -algo algo num -ripd root pid\n");
         exit(1);
     }
@@ -65,9 +65,12 @@ int main(int argc, char* argv[]) {
         perror(msg);
         exit(1);
     }
+    char msg[20];
+    sprintf(msg, "%s:", argv[9]);
+    write(STDOUT_FILENO, msg, strlen(msg));
 
     // ask parent to end stuff
-    wait_signal_from(root_pid, SIGUSR1, worker_handler);
+    // wait_signal_from(root_pid, SIGUSR1, worker_handler);
     
     exit(0);
 }

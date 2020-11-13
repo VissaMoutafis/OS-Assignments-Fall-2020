@@ -93,7 +93,6 @@ int compare_pair(Pointer a, Pointer b) {
 
 Pointer make_pair(char* str) {
     PrimePair a = malloc(sizeof(*a));
-
     // parse the input
     int cols;
     char** str_pair = parse_line(str, &cols, ",");
@@ -116,16 +115,20 @@ void visit_pair(Pointer p) {
     fflush(stdout);
 }
 
-float get_timestamp(int fd) {
+float get_timestamp(int fd, int* w_id) {
     char buffer[2];
     char *entry = calloc(1, sizeof(char));
     int len = 0;
+    char* proc_id = calloc(1, sizeof(char));
+    int len_proc_id = 0;
 
     while (read(fd, buffer, 1) > 0) {
         buffer[1] = '\0';
         if (strcmp(buffer, ":") == 0)
             break;
 
+        
+        // between the first 2 collumns there is the timestamp
         char *new_entry = calloc(++len + 1, sizeof(char));
         strcpy(new_entry, entry);
         free(entry);
@@ -133,13 +136,28 @@ float get_timestamp(int fd) {
         entry = new_entry;
     }
 
+    while (read(fd, buffer, 1) > 0) {
+        buffer[1]='\0';
+        if (strcmp(buffer, ":") == 0)
+            break;
+        //between the second and the third there is the proc id
+        char *new_proc_id = calloc(++len_proc_id + 1, sizeof(char));
+        strcpy(new_proc_id, proc_id);
+        free(proc_id);
+        new_proc_id[len_proc_id - 1] = buffer[0];
+        proc_id = new_proc_id;
+    }
+
+    // cast the time stamp to float
     float timestamp = strtof(entry, NULL);
     free(entry);
 
+    *w_id = atoi(proc_id);
+    free(proc_id);
     return timestamp;
 }
 
-void use_input(int fd, PQ pq, float* max_time, float* min_time) {
+void use_input(int fd, PQ pq, float* max_time, float* min_time, float timestamps[], ProcessType proc_type) {
     char *entry = calloc(1, sizeof(char));
     int len = 0;
     char buffer[2]={'\0','\0'};
@@ -151,7 +169,23 @@ void use_input(int fd, PQ pq, float* max_time, float* min_time) {
 
         // check for timestamps (min max)
         if (strcmp(buffer, ":") == 0) {
-            float t = get_timestamp(fd);
+            // we reaced a timestamp that needs parsing
+            int w_id=-1;                                // set the worker Id
+            float t = get_timestamp(fd, &w_id);         // get the timestamp and the worker ID
+
+            if (w_id > -1) {
+                if (proc_type == root)                  // if you are the root
+                    timestamps[w_id] = t;               // set the timestamp for the board to print later                   
+                else {                                 // you are not the root, so pass it up the process tree
+                    char buf[BUFSIZ];
+                    sprintf(buf, ":%.1f:%d:", t, w_id);
+                    write(STDOUT_FILENO, buf, strlen(buf));
+                }
+            } else {
+                perror("False parsing timestamp");
+                exit(1);
+            }
+
             if ((t - (*min_time)) <= 0.1){
                 *min_time = t;
             }
@@ -178,7 +212,6 @@ void use_input(int fd, PQ pq, float* max_time, float* min_time) {
         }
     }
     free(entry); // there is at least 1 byte still-reachable from the last else case in the for loop
-
 }
 
 static void write_batch(char** batch, int* size, int batch_size) {
@@ -194,7 +227,7 @@ static void write_batch(char** batch, int* size, int batch_size) {
     (*size) = 0;
 }
 
-static void send_batched_messages(void *messages) {
+static void send_batched_messages(void *messages, int* cnt) {
     PQ pq = *((PQ*)messages); // the messages are given in a priority queue
     int batch_len = BATCHSIZE;
     char *batch = calloc(batch_len, sizeof(char));
@@ -204,13 +237,19 @@ static void send_batched_messages(void *messages) {
 
     // start batching till the pq is empty
     while (!pq_empty(pq)) {
+        (*cnt)++;
         // pop one pair from the pq
         PrimePair pair = (PrimePair)pq_pop(pq); 
 
-        // the length of timestamp is 3 digits with the '.' 
+        // the length of timestamp
+        int len_of_timestamp = get_len_of_int((int)pair->time) + 2;
+        if (len_of_timestamp < 3)
+            len_of_timestamp = 3;
+
         // for the integer call the relative utility
+        int len_of_n = get_len_of_int(pair->n);
         // + 1 for the comma ',' character between +1 for the space char
-        int len = 3 + 1 + get_len_of_int(pair->n) + 1;
+        int len = len_of_n + len_of_timestamp + 1 + 1;
         // make the buffer
         char buf[len+1]; 
         // copy the string
@@ -249,8 +288,19 @@ static void send_batched_messages(void *messages) {
     free(batch);
 }
 
-void internal_read_from_child(int fd_array[][2], int number_of_children) {
+static void print_workers_timestamps(float timestamps[], int size) {
+    for (int i = 0;  i < size; i++)
+        printf("Time for W%d: %.1f ms\n", i, timestamps[i]);
+}
+
+void internal_read_from_child(int fd_array[][2], int number_of_children, ProcessType proc_type) {
     // make a pq to print the children sorted
+    int cnt = 0;
+    float children_timestamps[number_of_children * number_of_children];
+    if (proc_type == root)
+        for (int i = 0; i < number_of_children*number_of_children; i++)
+            children_timestamps[i] = 0.0;
+
     PQ pq = pq_create(compare_pair, free);
     float max_time=0, min_time = 9999999;
     bool has_active_children = false;
@@ -276,7 +326,7 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
                     // if the fd has something to read
                     if (fds[i].revents & POLLIN) {
                         // if the file descriptor is in the ready list
-                        use_input(fds[i].fd, pq, &max_time, &min_time);
+                        use_input(fds[i].fd, pq, &max_time, &min_time, children_timestamps, proc_type);
                         has_active_children = true;
                     }
                     if (fds[i].revents == POLLHUP){
@@ -292,13 +342,23 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
         }
     }
 
-    send_batched_messages(&pq);
-    
-    if (has_active_children){ // if the children have actually wrote something
+    send_batched_messages(&pq, &cnt);
+
+    // actions to take if you are root
+    if (proc_type == root) {
         char buf[BUFSIZ];
-        sprintf(buf, ":%.1f::%.1f:\n", max_time, min_time);
+        sprintf(buf, "\nRoot found %d primes.\n", cnt);
         write(STDOUT_FILENO, buf, strlen(buf));
+
+        if (has_active_children){ // if the children have actually wrote something
+            char buf[BUFSIZ];
+            sprintf(buf, "Min Time for Workers: %.1f ms\nMax Time for Workers: %.1f ms\n", min_time, max_time);
+            write(STDOUT_FILENO, buf, strlen(buf));
+            // print the worker times
+            print_workers_timestamps(children_timestamps, number_of_children*number_of_children);
+        }
     }
+
     fflush(stdout);
     pq_destroy(pq);
 }
