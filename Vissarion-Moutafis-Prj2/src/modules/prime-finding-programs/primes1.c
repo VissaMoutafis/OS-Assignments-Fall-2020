@@ -47,7 +47,6 @@ int main(int argc, char *argv[]) {
     t2 = times(&tb2);
     // if (c) {
         printf(":%.1f:", 1000*(float)(t2-t1)/(float)ticspersec);
-        printf("\n");
     // }
     fflush(stdout);
 

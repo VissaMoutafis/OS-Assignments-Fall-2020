@@ -50,6 +50,9 @@ void create_workers(int num_of_children, Range* ranges) {
     for (int i = 0; i < num_of_children; i++) {
         char algo[5];
         sprintf(algo, "%d", algo_index%PRIME_ALGOS);
+        char child_id[20];
+        sprintf(child_id, "%d", algo_index);
+    
         algo_index++;
         // create communication pipe
         if (pipe(fd_board[i]) == -1) {
@@ -69,12 +72,12 @@ void create_workers(int num_of_children, Range* ranges) {
 
         // if it's a child
         if (child_pid == 0) {
-                
+            
             // create the arg list and execute the external node code
             char *args[] = {"./workers", 
                             "-l", ranges[i].l, 
                             "-u", ranges[i].u, 
-                            "-algo", algo, "-rootpid", root_pid, (char *)0};
+                            "-algo", algo, "-rootpid", root_pid, child_id, (char *)0};
             child_behaviour(args, fd_board, i, num_of_children);
             exit(1);
         }

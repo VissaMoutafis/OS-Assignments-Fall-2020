@@ -40,7 +40,7 @@ uint ch_proc_thresh;
 #define READ 0
 #define WRITE 1
 #define TIMEOUT 2
-#define BATCHSIZE 200
+#define BATCHSIZE 2
 
 // function that creates children (different impl, same declaration)
 typedef void (*CreateChildren)(int num_of_children, Range* ranges);
