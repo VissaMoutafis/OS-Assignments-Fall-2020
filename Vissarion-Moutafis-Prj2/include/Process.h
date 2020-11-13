@@ -30,16 +30,17 @@
 // default number of children-processes created
 #define CHILD_PROC_DEF_NUM 3
 
+typedef enum {root=0, internal, worker}ProcessType;
+
 // the actual number of children-processes created
 uint ch_proc_thresh;
-
 
 
 // define the read and write indexes, for pipe communication
 #define READ 0
 #define WRITE 1
 #define TIMEOUT 2
-#define BATCHSIZE 2
+#define BATCHSIZE 200
 
 // function that creates children (different impl, same declaration)
 typedef void (*CreateChildren)(int num_of_children, Range* ranges);
@@ -54,7 +55,7 @@ void internal_node_behaviour(int argc, char *argv[], CreateChildren create_child
 void print_primes_from_child(int fd);
 
 // function for Async I/O between pipes (WARNING IT DISSAMBLES THE SINGAL HANDLER)
-void internal_read_from_child(int fd_array[][2], int number_of_children);
+void internal_read_from_child(int fd_array[][2], int number_of_children, ProcessType proc_type);
 
 // function to close the sibling pipes besides the current child-index
 void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children);

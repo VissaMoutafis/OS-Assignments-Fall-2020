@@ -31,7 +31,7 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
 
 void parent_behaviour(pid_t children_pid[], int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
-    internal_read_from_child(fd_board, num_of_children);
+    internal_read_from_child(fd_board, num_of_children, internal);
 }
 
 void create_workers(int num_of_children, Range* ranges) {

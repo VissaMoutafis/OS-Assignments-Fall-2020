@@ -49,7 +49,7 @@ void catch_usr1(int timeouts) {
 void parent_behaviour(int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
     // catch_usr1(num_of_children);
-    internal_read_from_child(fd_board, num_of_children);
+    internal_read_from_child(fd_board, num_of_children, root);
     set_signal_handler(SIGUSR1, root_handler);
     // catch_usr1(num_of_children);
 }

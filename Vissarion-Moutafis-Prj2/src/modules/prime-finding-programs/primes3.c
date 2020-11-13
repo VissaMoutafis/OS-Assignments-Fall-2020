@@ -54,12 +54,12 @@ int main(int argc, char *argv[]) {
         if (prime(i) == YES) {
             c++;
             t2 = times(&tb2);
-            printf("%d,%.1f ", i, (float)(t2-t1)/(float)ticspersec);
+            printf("%d,%.1f ", i, 1000*(float)(t2-t1)/(float)ticspersec);
         }
     }
     t2 = times(&tb2);
     // if (c) {
-        printf(":%.1f:", (float)(t2-t1)/(float)ticspersec);
+        printf(":%.1f:", 1000*(float)(t2-t1)/(float)ticspersec);
         printf("\n");
     // }
     fflush(stdout);

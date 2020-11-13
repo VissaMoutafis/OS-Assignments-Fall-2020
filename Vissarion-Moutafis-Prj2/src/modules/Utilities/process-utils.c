@@ -93,7 +93,6 @@ int compare_pair(Pointer a, Pointer b) {
 
 Pointer make_pair(char* str) {
     PrimePair a = malloc(sizeof(*a));
-
     // parse the input
     int cols;
     char** str_pair = parse_line(str, &cols, ",");
@@ -194,7 +193,7 @@ static void write_batch(char** batch, int* size, int batch_size) {
     (*size) = 0;
 }
 
-static void send_batched_messages(void *messages) {
+static void send_batched_messages(void *messages, int* cnt) {
     PQ pq = *((PQ*)messages); // the messages are given in a priority queue
     int batch_len = BATCHSIZE;
     char *batch = calloc(batch_len, sizeof(char));
@@ -204,13 +203,19 @@ static void send_batched_messages(void *messages) {
 
     // start batching till the pq is empty
     while (!pq_empty(pq)) {
+        (*cnt)++;
         // pop one pair from the pq
         PrimePair pair = (PrimePair)pq_pop(pq); 
 
-        // the length of timestamp is 3 digits with the '.' 
+        // the length of timestamp
+        int len_of_timestamp = get_len_of_int((int)pair->time) + 2;
+        if (len_of_timestamp < 3)
+            len_of_timestamp = 3;
+
         // for the integer call the relative utility
+        int len_of_n = get_len_of_int(pair->n);
         // + 1 for the comma ',' character between +1 for the space char
-        int len = 3 + 1 + get_len_of_int(pair->n) + 1;
+        int len = len_of_n + len_of_timestamp + 1 + 1;
         // make the buffer
         char buf[len+1]; 
         // copy the string
@@ -249,8 +254,9 @@ static void send_batched_messages(void *messages) {
     free(batch);
 }
 
-void internal_read_from_child(int fd_array[][2], int number_of_children) {
+void internal_read_from_child(int fd_array[][2], int number_of_children, ProcessType proc_type) {
     // make a pq to print the children sorted
+    int cnt = 0;
     PQ pq = pq_create(compare_pair, free);
     float max_time=0, min_time = 9999999;
     bool has_active_children = false;
@@ -292,11 +298,18 @@ void internal_read_from_child(int fd_array[][2], int number_of_children) {
         }
     }
 
-    send_batched_messages(&pq);
-    
+    send_batched_messages(&pq, &cnt);
+    if (proc_type == root) {
+        char buf[BUFSIZ];
+        sprintf(buf, "\nRoot found %d primes.\n", cnt);
+        write(STDOUT_FILENO, buf, strlen(buf));
+    }    
     if (has_active_children){ // if the children have actually wrote something
         char buf[BUFSIZ];
-        sprintf(buf, ":%.1f::%.1f:\n", max_time, min_time);
+        if (proc_type == internal)
+            sprintf(buf, ":%.1f::%.1f:\n", max_time, min_time);
+        else if (proc_type == root)
+            sprintf(buf, "\nMin Time for Workers: %.1f ms\nMax Time for Workers: %.1f ms\n", min_time, max_time);
         write(STDOUT_FILENO, buf, strlen(buf));
     }
     fflush(stdout);
