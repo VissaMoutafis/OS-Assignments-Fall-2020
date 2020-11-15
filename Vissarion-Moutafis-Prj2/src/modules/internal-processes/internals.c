@@ -28,7 +28,7 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
 }
 
 
-void parent_behaviour(pid_t children_pid[], int fd_board[][2], int num_of_children) {
+void parent_behaviour(int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
     internal_read_from_child(fd_board, num_of_children, internal);
 }
@@ -40,12 +40,7 @@ void create_workers(int num_of_children, Range* ranges) {
 
     // this is the board with the file descriptors for each child
     int fd_board[num_of_children][2];
-    pid_t children_pid[num_of_children];
    
-    // initialize the array of children pids
-    for (int i = 0; i < num_of_children; i++)
-        children_pid[i] = -1;
-
     for (int i = 0; i < num_of_children; i++) {
         char algo[5];
         sprintf(algo, "%d", algo_index%PRIME_ALGOS);
@@ -66,9 +61,6 @@ void create_workers(int num_of_children, Range* ranges) {
             exit(1);
         }
 
-        // add child's pid to the pid table for later use
-        children_pid[i] = child_pid;
-
         // if it's a child
         if (child_pid == 0) {
             
@@ -85,7 +77,7 @@ void create_workers(int num_of_children, Range* ranges) {
     for (int i = 0; i < num_of_children; ++i) {
         close(fd_board[i][WRITE]); // close all write fd's
     }
-    parent_behaviour(children_pid, fd_board, num_of_children);
+    parent_behaviour(fd_board, num_of_children);
 }
 
 static void check_args(int argc, char* argv[]) {

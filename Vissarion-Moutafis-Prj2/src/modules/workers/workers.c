@@ -29,7 +29,7 @@ static void check_args(int argc, char* argv[]) {
         exit(1);
     }
     if(!(atoi(argv[6]) <= PRIME_ALGOS)) {
-        fprintf(stderr, "The algorithm inedx must be between 0 and %d.\n", PRIME_ALGOS-1);
+        fprintf(stderr, "The algorithm index must be between 0 and %d.\n", PRIME_ALGOS-1);
         exit(1);
     }
 }

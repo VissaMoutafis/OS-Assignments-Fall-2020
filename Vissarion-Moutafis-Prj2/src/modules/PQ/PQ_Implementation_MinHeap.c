@@ -137,17 +137,17 @@ static void add_last(PQ pq, Pointer entry) {
         }
     }
 }
-static void recprint(PQNode r) {
-    if (!r) return;
+// static void recprint(PQNode r) {
+//     if (!r) return;
 
-    recprint(r->left);
-    printf("%d\n", *(int*)r->entry);
-    recprint(r->right);
-}
+//     recprint(r->left);
+//     printf("%d\n", *(int*)r->entry);
+//     recprint(r->right);
+// }
 
-void printpq(PQ pq) {
-    recprint(pq->head);
-}
+// void printpq(PQ pq) {
+    // recprint(pq->head);
+// }
 // remove the last node of the heap
 static void remove_last(PQ pq) {
     // we need to remove the last node and then set a new node as the last one of the min-heap
