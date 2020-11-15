@@ -1,4 +1,5 @@
 /*
+** Root process codebase
 ** Implemented by Vissarion Moutafis
 */
 
@@ -14,7 +15,6 @@ void root_handler (int sig, siginfo_t *siginfo, void *context) {
     volatile sig_atomic_t pid = siginfo->si_value.sival_int;
     if (pids_visited[pid%(n*n)] == 0){
         signals_encountered = signals_encountered + 1;
-        // printf("Caught %d\n", pid);
         pids_visited[pid%(n*n)] = 1;
         kill(pid, SIGUSR1);
     }
@@ -40,21 +40,12 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
     }
 }
 
-void catch_usr1(int timeouts) {
-    // float sec_wait = 0.7;
-    while(signals_encountered < timeouts*timeouts-2){
-    }
-}
-
 void parent_behaviour(int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages
-    // catch_usr1(num_of_children);
     char buf[BUFSIZ];
     sprintf(buf, "Primes in [%d, %d] are: ", l, u);
     write(STDOUT_FILENO, buf, strlen(buf));
     internal_read_from_child(fd_board, num_of_children, root);
-    set_signal_handler(SIGUSR1, root_handler);
-    // catch_usr1(num_of_children);
 }
 
 void create_internals(int num_of_children, Range* ranges) {

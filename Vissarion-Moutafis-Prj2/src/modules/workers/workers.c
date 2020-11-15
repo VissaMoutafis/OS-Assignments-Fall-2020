@@ -1,4 +1,5 @@
 /*
+** Worker processes code base
 ** Implemented by Vissarion Moutafis
 */
 
@@ -16,12 +17,11 @@ int root_pid=-1;
 void worker_handler(int sig, siginfo_t *siginfo, void *context) {
     // exit process
     exit(0);
-    
 }
 
 static void check_args(int argc, char* argv[]) {
     if (argc != 10) {
-        fprintf(stderr, "Wrong input! ./workers -l min -u max -algo algo num -ripd root pid\n");
+        fprintf(stderr, "Wrong input! ./workers -l [min] -u [max] -algo [algo num] -ripd [root pid] [child id]\n");
         exit(1);
     }
     if( !( is_numeric(argv[2]) && is_numeric(argv[4]) && is_numeric(argv[6]) && is_numeric(argv[8])) ) {
@@ -66,11 +66,16 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
     char msg[20];
+    // print the child index for the time profiling
     sprintf(msg, "%s:", argv[9]);
     write(STDOUT_FILENO, msg, strlen(msg));
 
     // ask parent to end stuff
-    // wait_signal_from(root_pid, SIGUSR1, worker_handler);
-    
+    #ifdef PROTOCOL
+    wait_signal_from(root_pid, SIGUSR1, worker_handler);
+    #else
+    send_signal_to(root_pid, SIGUSR1, worker_handler);
+    #endif
+
     exit(0);
 }

@@ -1,4 +1,5 @@
 /*
+** Internal process codebase
 ** Implemented by Vissarion Moutafis
 */
 
@@ -25,9 +26,7 @@ void child_behaviour(char** args, int fd_board[][2], int i, int num_of_children)
         exit(1);
     }
 }
-// void internal_handler(int sig, siginfo_t *siginfo, void *context) {
-//     return;
-// }
+
 
 void parent_behaviour(pid_t children_pid[], int fd_board[][2], int num_of_children) {
     // read and print the appropriate messages

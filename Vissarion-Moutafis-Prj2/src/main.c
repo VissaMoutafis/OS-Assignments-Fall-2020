@@ -1,4 +1,5 @@
 /*
+** main fuction for the program to run
 ** Implemented by Vissarion Moutafis
 */
 
@@ -32,8 +33,9 @@ static void check_args_specific(int argc, char* argv[], ArgChecks check, int des
 }
 
 static void reform_args(char *reformed_argv[], int argc, char* argv[]) {
-    // very specific function
-    
+    // (leaving a message to myself)
+    // app-specific function - DO NOT USE FOR PROJECTS TO COME
+
     assert(reformed_argv);
 
     // first check for proper ammount of arguments
@@ -76,17 +78,19 @@ static void reform_args(char *reformed_argv[], int argc, char* argv[]) {
             break;
         }
     }
+    
     // check if every argument is numerical
     check_args_specific(argc, reformed_argv, check_type, 0, reformed_argv, 3);
 }
 
 int main(int argc, char* argv[]) {
-    char *reformed_argv[(argc-1)/2];
 
+    // we will reform the arguments and simultaneously, run error checking
+    // so that we migrate the process to ./root 
+    char *reformed_argv[(argc-1)/2];
     reform_args(reformed_argv, argc, argv);
 
     // Now it's time to execute the root program
-
     if (execl("./root", "./root", "-l", reformed_argv[0], "-u", reformed_argv[1], "-w", reformed_argv[2], (char*)0) < 1) {
         perror("execl in main function calling root");
         exit(1);

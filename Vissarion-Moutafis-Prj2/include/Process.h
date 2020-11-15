@@ -40,7 +40,7 @@ uint ch_proc_thresh;
 #define READ 0
 #define WRITE 1
 #define TIMEOUT 2
-#define BATCHSIZE 2
+#define BATCHSIZE 2000
 
 // function that creates children (different impl, same declaration)
 typedef void (*CreateChildren)(int num_of_children, Range* ranges);
@@ -51,8 +51,6 @@ void wait_children(void);
 // internal processes behaviour (root and internal process nodes)
 void internal_node_behaviour(int argc, char *argv[], CreateChildren create_children);
 
-// fd : file descriptor to perform reading
-void print_primes_from_child(int fd);
 
 // function for Async I/O between pipes (WARNING IT DISSAMBLES THE SINGAL HANDLER)
 void internal_read_from_child(int fd_array[][2], int number_of_children, ProcessType proc_type);
@@ -65,6 +63,9 @@ void close_sibl_pipes(int fd_board[][2], int child_index, int num_of_children);
 // function to send signo to the receiver till he gets it
 // set a handler for any signo signal received from the current process
 void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginfo_t *, void *));
+
+// send signal signo to receiver_pid, and handle any incoming signo's with the handler
+void send_signal_to(pid_t receiver_pid, int signo, void (*handler)(int, siginfo_t *, void *));
 
 // easy to set signal handler (usign sigact)
 void set_signal_handler(int signo, void (*handler)(int, siginfo_t *, void *));

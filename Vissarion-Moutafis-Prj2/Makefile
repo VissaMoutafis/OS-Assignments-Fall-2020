@@ -24,9 +24,13 @@ CFLAGS += -I$(INCLUDE) -Wall -g3 -Werror -D_GNU_SOURCE
 OBJS =  
 
 # if you wanna add command line args un-comment the line below
-ARGS = -l 1 -u 100 -w 3
+ARGS = -l 1 -u 1000 -w 3
 
 include $(MODULES)/modules.inc
+
+ifdef PROTOCOL
+	CFLAGS += -D PROTOCOL=1
+endif
 
 $(PROGRAM) : $(OBJS) root internals workers primes1 primes2 primes3 $(SRC)/main.o
 	$(CC) $(CFLAGS) $(OBJS) $(SRC)/main.o -o $(PROGRAM)

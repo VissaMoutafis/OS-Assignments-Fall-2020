@@ -1,4 +1,6 @@
 /*
+** General process utilities that more 
+** that one process types will use.
 ** Implemented by Vissarion Moutafis
 */
 
@@ -43,19 +45,6 @@ static Range* divide_ranges(int n, int low, int high, int*size) {
     } while (start != high+1);
 
     return range_board;
-}
-
-void print_primes_from_child(int fd) {
-    char buffer[BUFSIZ];
-    ssize_t error;
-    if((error = read(fd, buffer, BUFSIZ)) != 0) {
-        write(STDOUT_FILENO, buffer, strlen(buffer)); // print the buffer
-        fflush(stdout);
-    } else if (error == -1) {
-        //something caused an error in the reading execution
-        perror("read()");
-        exit(1);
-    }
 }
 
 void internal_node_behaviour(int argc, char* argv[], CreateChildren create_children) {
@@ -296,15 +285,20 @@ static void print_workers_timestamps(float timestamps[], int size) {
 void internal_read_from_child(int fd_array[][2], int number_of_children, ProcessType proc_type) {
     // make a pq to print the children sorted
     int cnt = 0;
+    // initialize the children timestamp array
     float children_timestamps[number_of_children * number_of_children];
     if (proc_type == root)
         for (int i = 0; i < number_of_children*number_of_children; i++)
             children_timestamps[i] = 0.0;
 
+    // intialize the PQ to put the primes in
     PQ pq = pq_create(compare_pair, free);
+    // max and min times for each process
     float max_time=0, min_time = 9999999;
     bool has_active_children = false;
+    // initialize the poll fds board
     struct pollfd fds[number_of_children];
+    // number of open files per node is the number of children
     int open_files = number_of_children;
     //set up the fds array
     for (int i = 0; i < number_of_children; i++) {
@@ -314,7 +308,6 @@ void internal_read_from_child(int fd_array[][2], int number_of_children, Process
     }
     
     // because poll might get interrupted we will ignore all usr1 signals
-    // ignore_signal(SIGUSR1);
     while(open_files) {
         // call the poll syscall
         int retpoll = poll(fds, number_of_children, 0);
@@ -327,7 +320,7 @@ void internal_read_from_child(int fd_array[][2], int number_of_children, Process
                     if (fds[i].revents & POLLIN) {
                         // if the file descriptor is in the ready list
                         use_input(fds[i].fd, pq, &max_time, &min_time, children_timestamps, proc_type);
-                        has_active_children = true;
+                        has_active_children = true; // if this turn true then the node has active children
                     }
                     if (fds[i].revents == POLLHUP){
                         fds[i].fd = -1;
@@ -341,7 +334,8 @@ void internal_read_from_child(int fd_array[][2], int number_of_children, Process
             // exit(1);
         }
     }
-
+    
+    // now that we are done with everything we have to print all the primes we got 
     send_batched_messages(&pq, &cnt);
 
     // actions to take if you are root
@@ -401,19 +395,31 @@ void wait_signal_from(pid_t receiver_pid, int signo, void (*handler)(int, siginf
     // set the signal handler
     set_signal_handler(signo, handler);
     // wait for parents signal
-    // int timeouts = 0;
-    // float time = 0.7;
-    // float thresh = (float)(getpid()%100)/100.0;
-    // while (timeouts < 10) {
-        // timeouts++;
+    int timeouts = 0;
+    float time = 0.1;
+    float thresh = (float)(getpid()%100)/100.0 < 0.8 ? (float)(getpid()%100)/100.0 : 0.8;
+    while (timeouts < 1000) {
+        timeouts++;
         const union sigval val = {getpid()}; // make sure the receiver knows who send the signal
         if (sigqueue(receiver_pid, signo, val) < 0){
             perror("sigqueue");
             exit(1);
         }
-        // time = time > thresh ? 0 : (time + 0.3);
-        // sleep(time);
-    // }
+        // if we failed we will increase the wait time so the next time we wait a little longer
+        time = time > thresh ? 0 : (time + 0.3);
+        // wait for parent signal
+        sleep(time);
+    }
+}
+
+void send_signal_to(pid_t receiver_pid, int signo, void (*handler)(int, siginfo_t *, void *)) {
+    // set the signal handler
+    set_signal_handler(signo, handler);
+    const union sigval val = {getpid()}; // make sure the receiver knows who send the signal
+    if (sigqueue(receiver_pid, signo, val) < 0) {
+        perror("sigqueue");
+        exit(1);
+    }
 }
 
 // function to close all the pipes from unrelated to the IO siblings
