@@ -16,7 +16,7 @@ static void check_args_specific(int argc, char* argv[], ArgChecks check, int des
     {
     case check_num:
         if (argc < 2*desired_args+1) {
-            perror("Number of args is wrong");
+            fprintf(stderr, "Number of args is wrong\n");
             exit(1);
         }
     break;
@@ -24,7 +24,7 @@ static void check_args_specific(int argc, char* argv[], ArgChecks check, int des
     case check_type:
         for (int i = 0; i < n_args_num; i++) {
             if (!is_numeric(numerical_argv[i])) {
-                perror("Wrong input in numerical arg");
+                fprintf(stderr, "Wrong input in numerical arg (-l [lower] or -u [upper]). Values must be positive integers.\n");
                 exit(1);
             }
         }
@@ -50,7 +50,7 @@ static void reform_args(char *reformed_argv[], int argc, char* argv[]) {
         switch (argv[i][1]) {
         case 'l':
             if (reformed_argv[0]) {
-                perror("Can't set the same argument the same time");
+                fprintf(stderr, "Can't set the same argument the same time\n");
                 exit(1);
             }
             reformed_argv[0] = argv[i+1];     
@@ -58,7 +58,7 @@ static void reform_args(char *reformed_argv[], int argc, char* argv[]) {
         
         case 'u':
             if (reformed_argv[1]) {
-                perror("Can't set the same argument the same time");
+                fprintf(stderr, "Can't set the same argument the same time\n");
                 exit(1);
             }
             reformed_argv[1] = argv[i+1];
@@ -66,14 +66,14 @@ static void reform_args(char *reformed_argv[], int argc, char* argv[]) {
         
         case 'w':
             if (reformed_argv[2]) {
-                perror("Can't set the same argument the same time");
+                fprintf(stderr, "Can't set the same argument the same time\n");
                 exit(1);
             }
             reformed_argv[2] = argv[i+1];
         break;
 
         default:
-            perror("wrong argument!");
+            fprintf(stderr, "wrong argument!\n");
             exit(1);
             break;
         }
@@ -89,7 +89,10 @@ int main(int argc, char* argv[]) {
     // so that we migrate the process to ./root 
     char *reformed_argv[(argc-1)/2];
     reform_args(reformed_argv, argc, argv);
-
+    if (atoi(reformed_argv[0]) <= 0 || atoi(reformed_argv[1]) <= 0) {
+        fprintf(stderr, "The 2 limits must be positive integers.\n");
+        exit(1);
+    }
     // Now it's time to execute the root program
     if (execl("./root", "./root", "-l", reformed_argv[0], "-u", reformed_argv[1], "-w", reformed_argv[2], (char*)0) < 1) {
         perror("execl in main function calling root");

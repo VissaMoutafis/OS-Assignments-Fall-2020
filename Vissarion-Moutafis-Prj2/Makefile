@@ -71,4 +71,4 @@ run-no-args:
 re-run: clean run
 
 valgrind : $(PROGRAM)
-	valgrind ./$(PROGRAM) $(ARGS)
+	valgrind --trace-children=yes ./$(PROGRAM) $(ARGS)
