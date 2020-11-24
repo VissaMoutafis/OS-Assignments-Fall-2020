@@ -1,0 +1,37 @@
+# the top directory
+MAKE-DIR = $(PWD)
+
+# directories of src, includes and logs
+SRC := $(MAKE-DIR)/src
+INCLUDE := $(MAKE-DIR)/include
+LOGS := $(MAKE-DIR)/logs
+
+# directories of the .mk files
+CHEF-DIR := $(SRC)/chef
+SALAD-MAKER-DIR := $(SRC)/salad-maker
+
+CC = gcc
+
+CFLAGS = -g3 -Wall -Werror -I $(INCLUDE)
+
+LIBS = -lpthread
+
+OBJS = 
+
+include $(SRC)/src.inc 
+
+export MAKE-DIR CC CFLAGS LIBS OBJS
+
+all : 
+	$@(MAKE) -C $(CHEF-DIR) -f chef.mk
+	$@(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
+
+chef : 
+	$@(MAKE) -C $(CHEF-DIR) -f chef.mk
+
+salad-maker :
+	$@(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
+
+clean :
+	$@(MAKE) -C $(CHEF-DIR) -f chef.mk clean
+	$@(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk clean

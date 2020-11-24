@@ -5,16 +5,7 @@
 
 char* available_resources[] = {TOMATO, ONION, PEPPER};
 sem_t *mutex;
-// // create the worker processes 
-// static void hire_salad_workers (int number_of_workers, Order order) {
-//     pid_t pid = 0;
-//     // create the children processes (salad workers) 
-//     for (int i = 0; i < number_of_workers) {
-//         pid = fork();
-//         if (!pid)
-//             start_shift(available_resources[i%3], order);
-//     }
-// }
+
 
 // // get the workers to work
 // static void start_shift(char * available_resource, Order order) {
@@ -143,7 +134,8 @@ int main(int argc, char* argv[]) {
     // transform the arguments to int
     int number_of_salads = atoi(parsed[0]);
     int mantime = atoi(parsed[1]);
-
+    free(parsed);
+    
     // create the shared memory part
     Order order;
     if (create_order(&order, number_of_salads) == ORDER_FAILURE_CRT) {
@@ -158,8 +150,6 @@ int main(int argc, char* argv[]) {
     // create a mutex so that every action is done atomicaly
     mutex = sem_create(MUTEX, 1);
 
-    // hire 3 salad workers
-    // hire_salad_workers(3, order);
     printf("The shared mem has value: %d\n", *(int*)(order.salad_counter));
     chef_behaviour(order, ingr, 3, mantime);
      
