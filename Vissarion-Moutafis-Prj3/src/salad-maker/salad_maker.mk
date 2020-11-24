@@ -1,12 +1,14 @@
 PROGRAM := $(MAKE-DIR)/salad-maker
 
+OBJS += ./salad-maker.o
+
 ARGS :=
 
-$(PROGRAM) : $(OBJS) ./salad-maker.o
-	$(CC) $(CFLAGS) $(OBJS) ./salad-maker.o -o $(PROGRAM) $(LIBS)
+$(PROGRAM) : $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(PROGRAM) $(LIBS)
 
 run :
 	./$(PROGRAM) $(ARGS)
 
 clean :
-	$@(RM) -rf $(PROGRAM)
+	@$(RM) -f $(PROGRAM) ./salad-maker.o

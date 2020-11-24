@@ -67,8 +67,6 @@ static void chef_behaviour(Order order, Ingredients* ingr, int ingr_size, int ma
 
 // function to dettach and destroy relative shared memory segments (shmids and semaphores)
 static void close_store(char** ingr_names, Ingredients* ingr, int ingr_size, ShmPair* shm_table, int shm_table_size) {
-    // wait for the workers to end
-    wait_children();
 
     // shm segs destruction
     for (int i = 0; i < ingr_size; i++) 

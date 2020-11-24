@@ -1,12 +1,14 @@
 PROGRAM := $(MAKE-DIR)/chef
 
-ARGS :=
+OBJS += chef.o
 
-$(PROGRAM) : $(OBJS) ./chef.o
-	$(CC) $(CFLAGS) $(OBJS) ./chef.o -o $(PROGRAM) $(LIBS)
+ARGS := -m 0 -n 3
+
+$(PROGRAM) : $(OBJS) 
+	$(CC) $(CFLAGS) $(OBJS) -o $(PROGRAM) $(LIBS)
 
 run :
 	./$(PROGRAM) $(ARGS)
 
 clean :
-	$@(RM) -rf $(PROGRAM)
+	@$(RM) -f $(PROGRAM) ./chef.o

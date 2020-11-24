@@ -10,28 +10,32 @@ LOGS := $(MAKE-DIR)/logs
 CHEF-DIR := $(SRC)/chef
 SALAD-MAKER-DIR := $(SRC)/salad-maker
 
-CC = gcc
+CC := gcc
 
-CFLAGS = -g3 -Wall -Werror -I $(INCLUDE)
+CFLAGS := -g3 -Wall -Werror -I $(INCLUDE)
 
-LIBS = -lpthread
+LIBS := -lpthread
 
-OBJS = 
+OBJS := 
 
 include $(SRC)/src.inc 
 
 export MAKE-DIR CC CFLAGS LIBS OBJS
 
 all : 
-	$@(MAKE) -C $(CHEF-DIR) -f chef.mk
-	$@(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
+	@$(MAKE) -C $(CHEF-DIR) -f chef.mk
+	@$(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
 
 chef : 
-	$@(MAKE) -C $(CHEF-DIR) -f chef.mk
+	@$(MAKE) -C $(CHEF-DIR) -f chef.mk
 
 salad-maker :
-	$@(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
+	@$(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
 
 clean :
-	$@(MAKE) -C $(CHEF-DIR) -f chef.mk clean
-	$@(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk clean
+	@$(MAKE) -C $(CHEF-DIR) -f chef.mk clean
+	@$(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk clean
+	@$(RM) -f $(OBJS)
+
+clean-logs :
+	@$(RM) -f $(LOGS)/*.salad
