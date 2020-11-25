@@ -6,17 +6,33 @@
 char* available_resources[] = {TOMATO, ONION, PEPPER};
 sem_t *mutex;
 
+static int get_int_in(int l, int h) {
+    if (l == h) h++;
 
-// // get the workers to work
-// static void start_shift(char * available_resource, Order order) {
-//     char shmid[100], lb[10], ub[10];
-//     sprintf(lb, "%d", (rand*1000)%2);
-//     sprintf(ub, "%d", (rand()*1000)%3 + 2);
-//     sprintf(shmid, "%d", order.salad_counter_id);
-//     char *args = {"./salad-worker", "-t1" lb, "-t2", ub, "-s", shmid, "-r", available_resource};
+    int n = l - 1;
+    do {
+        n = rand() % h;
+    } while(n < l || n > h);
 
-//     execv(args[0], args);
-// }
+    return n;
+}
+
+static void wait_for_workers(Order order, int num_of_workers, int num_of_resources) {
+    printf("Ready to call the salad-maker programs. \
+    Call them with the following command line instructions:\n");
+    for (int i = 0; i < num_of_workers; ++i) {
+        int t1, t2;
+        t1 = get_int_in(0, MAX_PREP_TIME-1);
+        t2 = get_int_in(t1, MAX_PREP_TIME);
+        printf("./salad-maker -t1 %d -t2 %d -s %d -i %s", t1, t2, order.salad_counter_id, available_resources[i%num_of_resources]);
+        if (i != num_of_workers)
+            printf(" & ");
+        else 
+            printf("\n");
+    }
+    printf("\nPress any key, when ready: ");
+    getchar();
+}
 
 static void provide_ingredients(Ingredients ingr[], int size) {
     int ingr_id1 = rand() % size;
@@ -25,7 +41,7 @@ static void provide_ingredients(Ingredients ingr[], int size) {
         ingr_id2 = rand() % size;
     } while (ingr_id1 == ingr_id2);
 
-    sem_P(mutex);
+    // sem_P(mutex);
 
     //start of critical section (CS)
     // provide the salad makers with 2 ingredients
@@ -39,7 +55,7 @@ static void provide_ingredients(Ingredients ingr[], int size) {
     printf("2.Provided with resource '%s' %d, \n", available_resources[ingr_id2], value);
 
     // end of critical section
-    sem_V(mutex);
+    // sem_V(mutex);
 }
 
 static void take_a_break(int mantime) {
@@ -61,7 +77,7 @@ static void chef_behaviour(Order order, Ingredients* ingr, int ingr_size, int ma
     while (!check_done(order)){
         provide_ingredients(ingr, ingr_size);
         take_a_break(mantime);
-        *(int*)(order.salad_counter) += -1;
+        // *(int*)(order.salad_counter) += -1;
     }
 }
 
@@ -149,8 +165,9 @@ int main(int argc, char* argv[]) {
     mutex = sem_create(MUTEX, 1);
 
     printf("The shared mem has value: %d\n", *(int*)(order.salad_counter));
+    wait_for_workers(order, 3, 3);
     chef_behaviour(order, ingr, 3, mantime);
-     
+    
     // close the store (dettach everything and release them properly)
     ShmPair shm_table[] = {order};
     close_store(available_resources, ingr, 3, shm_table, 1);

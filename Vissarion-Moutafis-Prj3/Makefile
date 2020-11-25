@@ -22,20 +22,25 @@ include $(SRC)/src.inc
 
 export MAKE-DIR CC CFLAGS LIBS OBJS
 
+.PHONY : all
 all : 
 	@$(MAKE) -C $(CHEF-DIR) -f chef.mk
 	@$(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
 
+.PHONY : chef
 chef : 
 	@$(MAKE) -C $(CHEF-DIR) -f chef.mk
 
+.PHONY : salad-maker
 salad-maker :
 	@$(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk
 
+.PHONY : clean
 clean :
 	@$(MAKE) -C $(CHEF-DIR) -f chef.mk clean
 	@$(MAKE) -C $(SALAD-MAKER-DIR) -f salad_maker.mk clean
 	@$(RM) -f $(OBJS)
 
+.PHONY : clean-logs
 clean-logs :
 	@$(RM) -f $(LOGS)/*.salad

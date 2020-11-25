@@ -6,4 +6,3 @@
 #include "SharedSeg.h"
 #include "Sem.h"
 
-#define MAX_PREP_TIME 3
