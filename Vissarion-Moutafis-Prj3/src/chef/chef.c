@@ -69,7 +69,7 @@ static bool check_done(Order order) {
     int n = *(int*)(order.salad_counter);
     sem_V(mutex);
 
-    return n == 0;
+    return n <= 0;
 }
 
 static void chef_behaviour(Order order, Ingredients* ingr, int ingr_size, int mantime) {
@@ -82,8 +82,10 @@ static void chef_behaviour(Order order, Ingredients* ingr, int ingr_size, int ma
 }
 
 // function to dettach and destroy relative shared memory segments (shmids and semaphores)
-static void close_store(char** ingr_names, Ingredients* ingr, int ingr_size, ShmPair* shm_table, int shm_table_size) {
-
+static void close_store(sem_t* workers_done, char** ingr_names, Ingredients* ingr, int ingr_size, ShmPair* shm_table, int shm_table_size) {
+    // wait for workers to end
+    sem_P(workers_done);
+    sem_clear(SALAD_WORKER, workers_done);
     // shm segs destruction
     for (int i = 0; i < ingr_size; i++) 
         sem_clear(ingr_names[i], ingr[i]);
@@ -163,6 +165,7 @@ int main(int argc, char* argv[]) {
     Ingredients ingr[] = {tomato, onion, pepper};
     // create a mutex so that every action is done atomicaly
     mutex = sem_create(MUTEX, 1);
+    sem_t *children_done = sem_create(SALAD_WORKER, 1);
 
     printf("The shared mem has value: %d\n", *(int*)(order.salad_counter));
     wait_for_workers(order, 3, 3);
@@ -170,7 +173,7 @@ int main(int argc, char* argv[]) {
     
     // close the store (dettach everything and release them properly)
     ShmPair shm_table[] = {order};
-    close_store(available_resources, ingr, 3, shm_table, 1);
+    close_store(children_done, available_resources, ingr, 3, shm_table, 1);
     sem_clear(MUTEX, mutex);
     exit(0);
 }

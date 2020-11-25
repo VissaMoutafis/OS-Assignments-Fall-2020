@@ -25,6 +25,7 @@
 #define ONION "onion"
 #define PEPPER "pepper"
 #define MUTEX "salad-mutex"
+#define SALAD_WORKER "salad-workers-out"
 // failure to create
 #define ORDER_FAILURE_CRT -1    
 // general success code

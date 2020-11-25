@@ -34,7 +34,7 @@ static bool check_done(Order order) {
     int n = *(int*)(order.salad_counter);
     sem_V(mutex);
 
-    return n == 0;
+    return n <= 0;
 }
 
 static void require_ingredient(Order order, Ingredients ingredients[], int size){
@@ -47,10 +47,14 @@ static void require_ingredient(Order order, Ingredients ingredients[], int size)
 }
 
 static void cook_salad(int time) {
+    printf("Cooking...");
     sleep(time);
+    printf(" Done (%d sec)\n", time);
 }
 
 static void deliver_salad(Order *order) {
+    if (check_done(*order))
+        return;
     sem_P(mutex);
     // start of the critical section
     *(int*)(order->salad_counter) += -1;
@@ -118,7 +122,8 @@ int main(int argc, char* argv[]) {
     
     // acquire the mutex
     mutex = sem_retrieve(MUTEX);
-
+    sem_t *card = sem_retrieve(SALAD_WORKER);
+    sem_P_nonblock(card);
     do {
         require_ingredient(order, ingr, 2);
         if (!check_done(order)) {
@@ -126,4 +131,7 @@ int main(int argc, char* argv[]) {
             deliver_salad(&order);
         }
     } while (!check_done(order));
+    sem_V(card);
+
+    exit(0);
 }
