@@ -133,5 +133,10 @@ int main(int argc, char* argv[]) {
     } while (!check_done(order));
     sem_V(card);
 
+    sem_dettach(ingr[0]);
+    sem_dettach(ingr[1]);
+    sem_dettach(card);
+    sem_dettach(mutex);
+    free(parsed);
     exit(0);
 }

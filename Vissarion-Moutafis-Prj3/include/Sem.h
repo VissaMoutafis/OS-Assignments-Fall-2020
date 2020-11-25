@@ -1,6 +1,6 @@
 #pragma once
 
-// semaphore related activites
+// semaphore related activites  
 #include "Types.h"
 
 // create the semaphore and return a pointer to it
