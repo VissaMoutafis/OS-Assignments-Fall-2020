@@ -77,7 +77,6 @@ static void chef_behaviour(Order order, Ingredients* ingr, int ingr_size, int ma
     while (!check_done(order)){
         provide_ingredients(ingr, ingr_size);
         take_a_break(mantime);
-        // *(int*)(order.salad_counter) += -1;
     }
 }
 
@@ -136,6 +135,7 @@ static bool parse_args(int argc, char* argv[], char* proper_args[], int proper_a
 
 // called as "./chef -n [numOfSlds] -m mantime"
 int main(int argc, char* argv[]) {
+    system("clear");
     srand((unsigned int) time(NULL));
 
     char *proper_args[] = {"-n", "-m"};
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
     // create a mutex so that every action is done atomicaly
     mutex = sem_create(MUTEX, 1);
     sem_t *children_done = sem_create(SALAD_WORKER, 1);
-
+    
     printf("The shared mem has value: %d\n", *(int*)(order.salad_counter));
     wait_for_workers(order, 3, 3);
     chef_behaviour(order, ingr, 3, mantime);

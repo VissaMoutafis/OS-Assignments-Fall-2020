@@ -37,13 +37,10 @@ static bool check_done(Order order) {
     return n <= 0;
 }
 
-static void require_ingredient(Order order, Ingredients ingredients[], int size){
-    // start of critical section
-    for (int i = 0; !check_done(order) && i < size; i ++) {
-        while (!check_done(order) && sem_P_nonblock(ingredients[i]) < 0);
-        sem_print(in[i], ingredients[i]);
-    }
-    // end of critical section
+static void require_ingredient(Order order, Ingredients ingredient, char* name){
+    while (!check_done(order) && sem_P_nonblock(ingredient) < 0);
+    if (!check_done(order))
+        sem_print(name, ingredient);
 }
 
 static void cook_salad(int time) {
@@ -95,6 +92,7 @@ static bool parse_args(int argc, char* argv[], char* proper_args[], int proper_a
 }
 
 int main(int argc, char* argv[]) {
+    system("clear");
     srand((unsigned int) time(NULL));
 
     char *proper_args[] = {"-t1", "-t2", "-s", "-i"};
@@ -125,7 +123,9 @@ int main(int argc, char* argv[]) {
     sem_t *card = sem_retrieve(SALAD_WORKER);
     sem_P_nonblock(card);
     do {
-        require_ingredient(order, ingr, 2);
+        require_ingredient(order, ingr[0], in[0]);
+        require_ingredient(order, ingr[1], in[1]);
+
         if (!check_done(order)) {
             cook_salad(get_int_in(t1, t2));
             deliver_salad(&order);
