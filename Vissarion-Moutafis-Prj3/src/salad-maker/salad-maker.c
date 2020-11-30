@@ -152,5 +152,6 @@ int main(int argc, char *argv[]) {
     sem_dettach(mutex);
     sem_dettach(table);
     free(parsed);
+    fclose(logfile);
     exit(0);
 }

@@ -63,7 +63,7 @@ static void check_concurrent_workers(sem_t* tables, struct tm** start) {
             *start = time;
     } else if ((*start) != NULL) {
         // they don't work concurrently (but they did before (start was not null))
-        concurrency_handler(*start, time);
+        // concurrency_handler(*start, time);
         *start = NULL;
     } else {
         // they haven't been working concurrently as far as we know
@@ -212,5 +212,6 @@ int main(int argc, char* argv[]) {
     close_store(children_done, available_resources, ingr, 3, shm_table, 1);
     sem_clear(WORKING_TABLE, working_tables);
     sem_clear(MUTEX, mutex);
+    fclose(logfile);
     exit(0);
 }
