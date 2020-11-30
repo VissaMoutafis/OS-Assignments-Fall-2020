@@ -3,14 +3,15 @@
 **  Written by Vissarion Moutafis sdi1800119
 */
 #include "ParsingUtils.h"
+#include "Sem.h"
 
-char* get_time_str(void) {
+void get_time_str(char *buffer, int size) {
     time_t rawtime;
     struct tm *timeinfo;
 
     time(&rawtime);
     timeinfo = localtime(&rawtime);
-    return asctime(timeinfo);
+    strftime(buffer, size, USER_TIME_FORMAT, timeinfo);
 }
 
 struct tm *get_time(void) {
@@ -158,6 +159,21 @@ int get_int_in(int l, int h) {
     return n;
 }
 
-void print_log(FILE *file, char* msg) {
-    fprintf(file, "=== %s \n", msg);
+void print_log(LogCode code, FILE *file, char* msg, sem_t *log_mutex) {
+    // get the current time
+    char time_buf[80];
+    get_time_str(time_buf, 80);
+
+    // we must write atomicaly so we call the mutex wait call
+    if (log_mutex)
+        sem_P(log_mutex);
+    // get to the end of file (append only protocol)
+    fseek(file, 0, SEEK_END); 
+    // write the message
+    fprintf(file, "=%d,%s= %s \n", code, time_buf, msg); 
+    // flush the file so there is no buffering
+    fflush(file);
+    if (log_mutex)
+        sem_V(log_mutex);
+    // end of the write (signal the mutex semaphore)
 }

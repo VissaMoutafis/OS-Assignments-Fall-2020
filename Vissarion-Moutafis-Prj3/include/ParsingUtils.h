@@ -17,10 +17,10 @@ bool is_numeric(char *str);                                 // check if the stri
 char *num_to_str(int num);                                  // int -> string
 int get_len_of_int(int num);                                // get the number of digits an integer has
 void print_error(char *msg);                                // print error msg in stderr
-char* get_time_str(void);
+void get_time_str(char *buffer, int size);
 struct tm * get_time(void);
 int get_int_in(int l, int h);
-void print_log(FILE *file, char *msg);
+void print_log(LogCode code, FILE *file, char *msg, sem_t *log_mutex);    // write a log message to the specified file (if the log_mutex is not null then write it atomically)
 
 // Argument parsing utilities
 int find_arg_index(char *arg_list[], int argc, char *arg);

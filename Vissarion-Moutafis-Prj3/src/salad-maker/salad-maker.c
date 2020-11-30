@@ -4,10 +4,10 @@
 
 int t1 = -1, t2 = -1;
 char ingredient_name[20];
-sem_t *mutex;
-char *in;
+sem_t *mutex, *log_mutex;
+char *salad_maker_name;
 int saladmaker_index = -1;
-FILE * logfile;
+FILE *logfile, *common_log;
 
 static void get_index(char *ingr_name) {
     if (strcmp(ingr_name, TOMATO) == 0)
@@ -34,12 +34,20 @@ static bool check_done(Order order) {
 static void require_ingredient(Order order, Ingredients ingredient) {
     while (!check_done(order) && sem_P_nonblock(ingredient) < 0);
     if (!check_done(order))
-        sem_print(in, ingredient);
+        sem_print(salad_maker_name, ingredient);
 }
 
 static void cook_salad(int time) {
+    char log_buf[100];
+    sprintf(log_buf, ":%s: Start cooking salad", salad_maker_name);
+    print_log(log_code_cook_start, logfile, log_buf, NULL);
+    print_log(log_code_cook_start, common_log, log_buf, log_mutex);
+    // cook (idle time for the process)
     sleep(time);
-    fprintf(logfile, "Salad ready! (work time: %d seconds)\n", time);
+    
+    sprintf(log_buf, ":%s: Salad ready! (work time: %d seconds)\n", salad_maker_name, time);
+    print_log(log_code_cook_end, logfile, log_buf, NULL);
+    print_log(log_code_cook_end, common_log, log_buf, log_mutex);
 }
 
 static void deliver_salad(Order *order) {
@@ -47,23 +55,27 @@ static void deliver_salad(Order *order) {
     sem_P(mutex);
     // start of the critical section
     order->shmem->num_of_salads -= 1;
+    order->shmem->salads_per_saladmaker[saladmaker_index] += 1;
     // end of the critical section
     sem_V(mutex);
 }
 
+// function to acquire the shared memory parts
 static void acquire_order(int shmid, Order *order) {
     assert(shmid > -1);
-
+    // get the shmid and the relative shared memory segment
     order->shm_id = shmid;
     order->shmem = shm_attach(shmid);
 }
 
+// classis usage prompt
 static void print_usage(void) {
     fprintf(stderr,
             "\n   Usage: ~$ ./salad-maker -t1 [lb] -t2 [ub] -s [shared memory "
             "id] -i [ingredient]\n");
 }
 
+// function to check and parse the arguments
 static bool parse_args(int argc, char *argv[], char *proper_args[],
                        int proper_args_size, char *num_args[],
                        int num_args_size, char ***parsed) {
@@ -87,71 +99,86 @@ static bool parse_args(int argc, char *argv[], char *proper_args[],
     return true;
 }
 
+
+// call as ./salad-maker -t1 lb -t2 ub -s [shared mem id] -i [main resource string-like name]
 int main(int argc, char *argv[]) {
+    // initiaze the rand's seed
     srand((unsigned int)time(NULL));
 
+    // initialize and check the argument list
     char *proper_args[] = {"-t1", "-t2", "-s", "-i"};
     char *numeric_args[] = {"-t1", "-t2", "-s"};
     char **parsed = NULL;
-
-    bool ret_val =
-        parse_args(argc, argv, proper_args, 4, numeric_args, 3, &parsed);
-
+    bool ret_val = parse_args(argc, argv, proper_args, 4, numeric_args, 3, &parsed);
     if (ret_val == false) exit(1);
-
+    // get the argument values
     t1 = atoi(argv[2]);
     t2 = atoi(argv[4]);
     if (t1 < 0) t1 = 0;
     if (t2 < 0) t2 = 0;
     if (t1 == t2) t2++;
+
+    // open the log files
     char filename[100] = "./logs/saladmaker-";
     strcat(filename, argv[argc-1]);
-    logfile = fopen(filename, "w");
-
+    logfile = fopen(filename, "w");         // personal log file
+    common_log = fopen(LOG_PATH, "a");      // common logfile
+    
+    // acquire the order (shared mem segment)
     Order order;
     acquire_order(atoi(argv[6]), &order);
 
     // acquire the ingredient semaphores
     strcpy(ingredient_name, argv[8]);
-    in =  ingredient_name;
-    get_index(ingredient_name);
+    salad_maker_name =  ingredient_name;
     Ingredients ingr = set_ingredient_semaphores(ingredient_name);
     if (ingr == NULL)
         perror("retrieving sems at workers");
     // acquire the mutex
     mutex = sem_retrieve(MUTEX);
+    log_mutex = sem_retrieve(LOG_MUTEX);
+    // acquire the card semaphore so that you check in and check out of the procedure
     sem_t *card = sem_retrieve(SALAD_WORKER);
+    // acquire the table semaphore so that you signal the chef that everything is ok 
     sem_t * table = sem_retrieve(WORKING_TABLE);
+    // get the salad makers indexing based on the realtive enum type (in order to increase the proper salad counter in the shared memory)
+    get_index(ingredient_name);
 
-    fprintf(logfile, "Salad-maker-%s starts working...\n", ingredient_name);
-    // check working card
+    // print initial messages to both personal and public logs
+    char log_buf[100];
+    sprintf(log_buf, ":%s: starts working...\n", salad_maker_name);
+    print_log(log_code_cook_start, logfile, log_buf, NULL);
+    print_log(log_code_cook_start, common_log, log_buf, log_mutex);
+
+    // check in for work (don't block on the sem, however the return value)
     sem_P_nonblock(card);
     do {
         // request ingredients
         require_ingredient(order, ingr);
+        // inform that you took the ingredients
+        sem_V(table); 
+        // if there are still salads to be cooked
         if (!check_done(order)) {
-            // get to the table
-            sem_P_nonblock(table);
             // cook the salad for some time
             cook_salad(get_int_in(t1, t2));
             // deliver the salad
-            deliver_salad(&order);
-            if (!check_done(order))
-                order.shmem->salads_per_saladmaker[saladmaker_index] += 1;
-            sem_V(table);
-        }
-        // release the table
-        
+            deliver_salad(&order);                
+        }        
     } while (!check_done(order));
-    // check out 
+    sprintf(log_buf, ":%s: finished working...\n", salad_maker_name);
+    print_log(log_code_cook_end, logfile, log_buf, NULL);
+    print_log(log_code_cook_end, common_log, log_buf, log_mutex);
+    // check out of the store
     sem_V(card);
 
     // dettach process from the semaphores
     sem_dettach(ingr);
     sem_dettach(card);
     sem_dettach(mutex);
+    sem_dettach(log_mutex);
     sem_dettach(table);
     free(parsed);
     fclose(logfile);
+    fclose(common_log);
     exit(0);
 }

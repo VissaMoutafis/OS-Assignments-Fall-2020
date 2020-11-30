@@ -27,6 +27,14 @@
 #define MUTEX "salad-mutex"
 #define SALAD_WORKER "salad-workers-out"
 #define WORKING_TABLE "working-table"
+#define LOG_MUTEX "salad-log-mutex"
+
+// path to the public log
+#define LOG_PATH "./logs/common-log"
+
+// format for time printing
+#define USER_TIME_FORMAT "%H:%M:%S"
+
 // failure to create
 #define ORDER_FAILURE_CRT -1    
 // general success code
@@ -36,6 +44,16 @@
 typedef sem_t* Ingredients;
 
 typedef enum {tomato=0, onion=1, pepper=2} SaladMakerIndex;
+
+typedef enum {
+    log_code_start = 0,
+    log_code_end,
+    log_code_stats,
+    log_code_cook_start,
+    log_code_cook_end,
+    log_code_provide_ingr,
+    log_code_receive_ingr
+} LogCode;
 
 typedef struct {
     int salads_per_saladmaker[3];
@@ -49,4 +67,3 @@ typedef struct {
 } Order;
 
 typedef Order ShmPair;
-
