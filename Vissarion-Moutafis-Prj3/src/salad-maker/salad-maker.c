@@ -33,8 +33,13 @@ static bool check_done(Order order) {
 
 static void require_ingredient(Order order, Ingredients ingredient) {
     while (!check_done(order) && sem_P_nonblock(ingredient) < 0);
-    if (!check_done(order))
+    if (!check_done(order)) {
         sem_print(salad_maker_name, ingredient);
+        char log_buf[100];
+        sprintf(log_buf, ":%s: received the 2 needed ingredients", salad_maker_name);
+        print_log(log_code_receive_ingr, logfile, log_buf, NULL);
+        print_log(log_code_receive_ingr, common_log, log_buf, log_mutex);
+    }
 }
 
 static void cook_salad(int time) {
@@ -45,7 +50,7 @@ static void cook_salad(int time) {
     // cook (idle time for the process)
     sleep(time);
     
-    sprintf(log_buf, ":%s: Salad ready! (work time: %d seconds)\n", salad_maker_name, time);
+    sprintf(log_buf, ":%s: Salad ready! (work time:%d s)", salad_maker_name, time);
     print_log(log_code_cook_end, logfile, log_buf, NULL);
     print_log(log_code_cook_end, common_log, log_buf, log_mutex);
 }
@@ -146,9 +151,9 @@ int main(int argc, char *argv[]) {
 
     // print initial messages to both personal and public logs
     char log_buf[100];
-    sprintf(log_buf, ":%s: starts working...\n", salad_maker_name);
-    print_log(log_code_cook_start, logfile, log_buf, NULL);
-    print_log(log_code_cook_start, common_log, log_buf, log_mutex);
+    sprintf(log_buf, ":%s: starts working...", salad_maker_name);
+    print_log(log_code_start, logfile, log_buf, NULL);
+    print_log(log_code_start, common_log, log_buf, log_mutex);
 
     // check in for work (don't block on the sem, however the return value)
     sem_P_nonblock(card);
@@ -165,9 +170,9 @@ int main(int argc, char *argv[]) {
             deliver_salad(&order);                
         }        
     } while (!check_done(order));
-    sprintf(log_buf, ":%s: finished working...\n", salad_maker_name);
-    print_log(log_code_cook_end, logfile, log_buf, NULL);
-    print_log(log_code_cook_end, common_log, log_buf, log_mutex);
+    sprintf(log_buf, ":%s: finished working...", salad_maker_name);
+    print_log(log_code_end, logfile, log_buf, NULL);
+    print_log(log_code_end, common_log, log_buf, log_mutex);
     // check out of the store
     sem_V(card);
 

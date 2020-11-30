@@ -35,7 +35,7 @@ static int provide_ingredients(Ingredients ingr[], int size, int prev) {
     
     // print the proper log messages
     char msg[150];
-    sprintf(msg, "Signal to salad-maker with main resource '%s', you're ready to cook\n", available_resources[ingr_id]);
+    sprintf(msg, "Signal to salad-maker with main resource '%s'", available_resources[ingr_id]);
     print_log(log_code_provide_ingr, logfile, msg, NULL);
     print_log(log_code_provide_ingr, common_log, msg, log_mutex);
     return ingr_id;
@@ -81,6 +81,7 @@ static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t
         // while there are salads to be cooked
 
         // try to use the table (check if the table is empty)
+        printf("Checking if table is free.\n");
         sem_P(table);
         printf("Table is free\n"); //REMEBER TO REMOVE
 

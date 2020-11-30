@@ -1,0 +1,6 @@
+Shared Memmory ID: 426031
+=0,19:21:16= Chef begins distributing ingredients to the salad makers 
+=5,19:21:16= Signal to salad-maker with main resource 'tomato' 
+=5,19:21:21= Signal to salad-maker with main resource 'pepper' 
+=1,19:21:23= Chef stopped ingredients distribution 
+=2,19:21:23= Results: Salads Done 1/1,  Salads per salad maker {0, 0, 1} 
