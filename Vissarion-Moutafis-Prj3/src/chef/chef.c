@@ -4,18 +4,9 @@
 #include "ParsingUtils.h"
 
 char* available_resources[] = {TOMATO, ONION, PEPPER};
+int init_salads=0;
 sem_t *mutex;
-
-static int get_int_in(int l, int h) {
-    if (l == h) h++;
-
-    int n = l - 1;
-    do {
-        n = rand() % h;
-    } while(n < l || n > h);
-
-    return n;
-}
+FILE* logfile;
 
 static void wait_for_workers(Order order, int num_of_workers, int num_of_resources) {
     printf("Ready to call the salad-maker programs. \
@@ -24,7 +15,7 @@ static void wait_for_workers(Order order, int num_of_workers, int num_of_resourc
         int t1, t2;
         t1 = get_int_in(0, MAX_PREP_TIME-1);
         t2 = get_int_in(t1, MAX_PREP_TIME);
-        printf("./salad-maker -t1 %d -t2 %d -s %d -i %s", t1, t2, order.salad_counter_id, available_resources[i%num_of_resources]);
+        printf("./salad-maker -t1 %d -t2 %d -s %d -i %s", t1, t2, order.shm_id, available_resources[i%num_of_resources]);
         if (i != num_of_workers)
             printf(" & ");
         else 
@@ -34,28 +25,19 @@ static void wait_for_workers(Order order, int num_of_workers, int num_of_resourc
     getchar();
 }
 
-static void provide_ingredients(Ingredients ingr[], int size) {
-    int ingr_id1 = rand() % size;
-    int ingr_id2;
+static int provide_ingredients(Ingredients ingr[], int size, int prev) {
+    int ingr_id;
     do {
-        ingr_id2 = rand() % size;
-    } while (ingr_id1 == ingr_id2);
+        ingr_id = rand() % size;
+    } while (prev == ingr_id);
 
-    // sem_P(mutex);
-
-    //start of critical section (CS)
-    // provide the salad makers with 2 ingredients
-    int value=-100;
-    sem_V(ingr[ingr_id1]);
-    sem_getvalue(ingr[ingr_id1], &value);
-    printf("1.Provided with resource '%s' %d, \n", available_resources[ingr_id1],value);
+    // provide the salad maker with 2 ingredients
+    sem_V(ingr[ingr_id]);
+    char msg[150];
+    sprintf(msg, "Signal to salad-maker with main resource '%s', you're ready to cook\n", available_resources[ingr_id]);
+    print_log(logfile, msg);
     
-    sem_V(ingr[ingr_id2]);
-    sem_getvalue(ingr[ingr_id2], &value);
-    printf("2.Provided with resource '%s' %d, \n", available_resources[ingr_id2], value);
-
-    // end of critical section
-    // sem_V(mutex);
+    return ingr_id;
 }
 
 static void take_a_break(int mantime) {
@@ -66,18 +48,62 @@ static void take_a_break(int mantime) {
 static bool check_done(Order order) {
     // we need to check everything atomicaly
     sem_P(mutex);
-    int n = *(int*)(order.salad_counter);
+    int n = order.shmem->num_of_salads;
     sem_V(mutex);
 
     return n <= 0;
 }
 
-static void chef_behaviour(Order order, Ingredients* ingr, int ingr_size, int mantime) {
-    // TODO : pick 2 ingredients, wait for a little. Repeat
-    while (!check_done(order)){
-        provide_ingredients(ingr, ingr_size);
-        take_a_break(mantime);
+static void check_concurrent_workers(sem_t* tables, struct tm** start) {
+    struct tm* time = get_time();
+    if (sem_P_nonblock(tables) == -1) {
+        // they work concurrently
+        // check if its start time
+        if (!(*start))
+            *start = time;
+    } else if ((*start) != NULL) {
+        // they don't work concurrently (but they did before (start was not null))
+        concurrency_handler(*start, time);
+        *start = NULL;
+    } else {
+        // they haven't been working concurrently as far as we know
+        *start = NULL;
     }
+}
+
+static void print_result_statistics(Order order) {
+    char msg[300];
+    int salads_per_saladmaker[3];
+    memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
+    sprintf(msg, "Results: Salads Done %d/%d,  Salads per salad maker {%d, %d, %d}",
+            init_salads - order.shmem->num_of_salads, init_salads,
+            salads_per_saladmaker[0], salads_per_saladmaker[1],
+            salads_per_saladmaker[2]);
+    print_log(logfile, msg);
+}
+
+static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t* tables, int mantime) {
+    // print beggining log
+    char msg[150];
+    sprintf(msg, "Chef begins distributing ingredients to the salad makers at %s", get_time_str());
+    print_log(logfile, msg);
+
+    int prev_ingr_id = -1;
+    struct tm* concurrent_start = NULL;
+
+    while (!check_done(order)){
+        prev_ingr_id = provide_ingredients(ingr, ingr_size, prev_ingr_id);
+        // check if they worked together
+        check_concurrent_workers(tables, &concurrent_start);
+        // relax for mantime seconds (process turn to idle)
+        take_a_break(mantime);
+        // check if they worked together
+        check_concurrent_workers(tables, &concurrent_start);
+    }
+    // print ending log and results
+    sprintf(msg,"Chef stopped ingredients distribution at %s", get_time_str());
+    print_log(logfile, msg);
+    print_result_statistics(order);
 }
 
 // function to dettach and destroy relative shared memory segments (shmids and semaphores)
@@ -91,21 +117,24 @@ static void close_store(sem_t* workers_done, char** ingr_names, Ingredients* ing
     
     // semaphore destruction
     for (int i = 0; i < shm_table_size; i++)
-        shm_destroy(shm_table[i].salad_counter_id);
+        shm_destroy(shm_table[i].shm_id);
 }
 
 
 static int create_order(Order *order, int number_of_salads) {
     // create the shared memory
-    order->salad_counter_id = shm_create(sizeof(int));
-    if (order->salad_counter_id < 0)
+    order->shm_id = shm_create(sizeof(SharedMem));
+    if (order->shm_id < 0) {
+        perror("creating order");
         return ORDER_FAILURE_CRT;
-    printf("Memmory ID: %d\n", order->salad_counter_id);
+    }
+    fprintf(logfile, "Shared Memmory ID: %d\n", order->shm_id);
     // if everything ok, then attach the process to the shared memory part
-    order->salad_counter = shm_attach(order->salad_counter_id);
+    order->shmem = (SharedMem*)shm_attach(order->shm_id);
     // initialize the shared segment
-    *(int*)(order->salad_counter) = number_of_salads;
-
+    order->shmem->num_of_salads = number_of_salads;
+    for (int i = 0; i < 3; i++) order->shmem->salads_per_saladmaker[i] = 0;
+    init_salads = number_of_salads;
     return ORDER_SUCCESS;
 }
 
@@ -136,6 +165,7 @@ static bool parse_args(int argc, char* argv[], char* proper_args[], int proper_a
 // called as "./chef -n [numOfSlds] -m mantime"
 int main(int argc, char* argv[]) {
     system("clear");
+    
     srand((unsigned int) time(NULL));
 
     char *proper_args[] = {"-n", "-m"};
@@ -150,6 +180,10 @@ int main(int argc, char* argv[]) {
     // transform the arguments to int
     int number_of_salads = atoi(parsed[0]);
     int mantime = atoi(parsed[1]);
+    logfile = fopen("./logs/chef", "w");
+    if (logfile == NULL) {
+        perror("fopen");
+    }
     free(parsed);
     
     // create the shared memory part
@@ -163,17 +197,20 @@ int main(int argc, char* argv[]) {
     onion = sem_create(ONION, 0);
     pepper = sem_create(PEPPER, 0);
     Ingredients ingr[] = {tomato, onion, pepper};
+
     // create a mutex so that every action is done atomicaly
     mutex = sem_create(MUTEX, 1);
     sem_t *children_done = sem_create(SALAD_WORKER, 1);
-    
-    printf("The shared mem has value: %d\n", *(int*)(order.salad_counter));
+    sem_t *working_tables = sem_create(WORKING_TABLE, 2);
+    // print out the workers calling lines and wait for them (user initiated)
     wait_for_workers(order, 3, 3);
-    chef_behaviour(order, ingr, 3, mantime);
+    // go to the chef behaviour
+    chef_behaviour(order, ingr, 3, working_tables, mantime);
     
     // close the store (dettach everything and release them properly)
     ShmPair shm_table[] = {order};
     close_store(children_done, available_resources, ingr, 3, shm_table, 1);
+    sem_clear(WORKING_TABLE, working_tables);
     sem_clear(MUTEX, mutex);
     exit(0);
 }

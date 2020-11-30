@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <time.h>
 
 char *make_str(FILE **_stream_);                            // get a line from the stream as a string
 size_t fget_lines(char *filename);                          // get the #lines of file with name 'filename'
@@ -16,7 +17,10 @@ bool is_numeric(char *str);                                 // check if the stri
 char *num_to_str(int num);                                  // int -> string
 int get_len_of_int(int num);                                // get the number of digits an integer has
 void print_error(char *msg);                                // print error msg in stderr
-
+char* get_time_str(void);
+struct tm * get_time(void);
+int get_int_in(int l, int h);
+void print_log(FILE *file, char *msg);
 
 // Argument parsing utilities
 int find_arg_index(char *arg_list[], int argc, char *arg);

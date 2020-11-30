@@ -4,6 +4,21 @@
 */
 #include "ParsingUtils.h"
 
+char* get_time_str(void) {
+    time_t rawtime;
+    struct tm *timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    return asctime(timeinfo);
+}
+
+struct tm *get_time(void) {
+    time_t rawtime;
+    time(&rawtime);
+    return localtime(&rawtime);
+}
+
 void print_error(char *msg) {
     fprintf(stderr, "Error: %s\n", msg);
 }
@@ -130,4 +145,19 @@ int get_len_of_int(int num) {
     }
 
     return cnt;
+}
+
+int get_int_in(int l, int h) {
+    if (l == h) h++;
+
+    int n = l - 1;
+    do {
+        n = rand() % h;
+    } while (n < l || n > h);
+
+    return n;
+}
+
+void print_log(FILE *file, char* msg) {
+    fprintf(file, "=== %s \n", msg);
 }

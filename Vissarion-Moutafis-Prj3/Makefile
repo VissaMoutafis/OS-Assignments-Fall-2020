@@ -43,4 +43,4 @@ clean :
 
 .PHONY : clean-logs
 clean-logs :
-	@$(RM) -f $(LOGS)/*.salad
+	@$(RM) -f $(LOGS)/*
