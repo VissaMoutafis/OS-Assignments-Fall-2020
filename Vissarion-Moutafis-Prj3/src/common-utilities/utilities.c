@@ -2,16 +2,23 @@
 ** Usefull utilities like string parsers and file lines to string converters
 **  Written by Vissarion Moutafis sdi1800119
 */
+#include <sys/time.h>
+#include <time.h>
 #include "ParsingUtils.h"
 #include "Sem.h"
 
 void get_time_str(char *buffer, int size) {
-    time_t rawtime;
+    char usec_buf[20];
     struct tm *timeinfo;
+    struct timeval tv;
 
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
+    gettimeofday(&tv, NULL);
+
+    timeinfo = localtime(&tv.tv_sec);
     strftime(buffer, size, USER_TIME_FORMAT, timeinfo);
+    strcat(buffer, ":");
+    sprintf(usec_buf, "%d", (int)tv.tv_usec /10000);
+    strcat(buffer, usec_buf);
 }
 
 struct tm *get_time(void) {
