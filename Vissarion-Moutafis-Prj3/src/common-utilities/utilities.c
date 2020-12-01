@@ -7,6 +7,9 @@
 #include "ParsingUtils.h"
 #include "Sem.h"
 
+// a typedefed enum type needed for the string-parsing-to-MyTime struct-function
+typedef enum { hours = 0, minutes = 1, seconds = 2, milliseconds = 3 } TimePart;
+
 void get_time_str(char *buffer, int size) {
     char usec_buf[20];
     struct tm *timeinfo;
@@ -17,14 +20,129 @@ void get_time_str(char *buffer, int size) {
     timeinfo = localtime(&tv.tv_sec);
     strftime(buffer, size, USER_TIME_FORMAT, timeinfo);
     strcat(buffer, ":");
-    sprintf(usec_buf, "%d", (int)tv.tv_usec /10000);
+    int m_sec = (int)tv.tv_usec / 10000;
+    if (m_sec < 10) m_sec *= 10;
+    sprintf(usec_buf, "%d", m_sec);
     strcat(buffer, usec_buf);
 }
 
-struct tm *get_time(void) {
+void MyTime_copy(MyTime *dest, MyTime src) {
+    assert(dest);
+    dest->hour = src.hour;
+    dest->min = src.min;
+    dest->sec = src.sec;
+    dest->millisec = src.millisec;
+}
+
+void MyTime_get_time(MyTime *my_time) {
+    assert(my_time);
     time_t rawtime;
     time(&rawtime);
-    return localtime(&rawtime);
+    struct tm *timeinfo;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    timeinfo = localtime(&rawtime);
+    my_time->hour = timeinfo->tm_hour;
+    my_time->min = timeinfo->tm_min;
+    my_time->sec = timeinfo->tm_sec;
+    my_time->millisec = (int)tv.tv_usec/10000; // 2 digs accuracy
+}
+
+// return in format HH:MM:SS:ss
+void MyTime_time_to_str(MyTime *my_time, char *buffer, int buf_size) {
+    assert(buf_size > 11); // min buffer size
+    assert(my_time);
+    
+    char usec_buf[10]; // buffer to write milliseconds
+    // write from the struct tm* first
+    struct tm t;
+    t.tm_hour = my_time->hour;
+    t.tm_min = my_time->min;
+    t.tm_sec = my_time->sec;
+    strftime(buffer, buf_size, "%H:%M:%S", &t);
+    strcat(buffer, ":");
+    // concatenate the 2 buffers
+    sprintf(usec_buf, "%d", my_time->millisec);
+    strcat(buffer, usec_buf);
+}
+
+static void set_time_part(MyTime *my_time, int new_val, TimePart time_part) {
+    switch (time_part) {
+    case hours:
+        MyTime_set_hours(my_time, new_val);
+    break;
+
+    case minutes:
+        MyTime_set_minutes(my_time, new_val);
+    break;
+
+    case seconds:
+        MyTime_set_seconds(my_time, new_val);
+    break;
+    
+    case milliseconds:
+        MyTime_set_milliseconds(my_time, new_val);
+    break;
+    default:
+        fprintf(stderr, "set_time_part: false value in time_part variable\n");
+        break;
+    }
+}
+
+// pass in format HH:MM:SS:ss
+void MyTime_str_to_time(MyTime *my_time, char *src_buffer, int src_buf_size) {
+    assert(my_time);
+    assert(strlen(src_buffer) == 11);
+    char b[3];
+    int b_id = 0;
+    memset(b, 0, 3);
+    TimePart  t = hours;
+    // fprintf(stderr, "============MyTime_str_to_time: Not yet needed, Should be implemented.\n");
+    for (int i = 0; i <= src_buf_size; i++) {
+        if (src_buffer[i] == ':' || i == src_buf_size) {
+            // add the time part to the proper variable
+            set_time_part(my_time, atoi(b), t);
+            t = (t+1)%4;
+            memset(b, 0, 3);
+            b_id = 0;
+        } else if (isdigit(src_buffer[i])){
+            b[b_id] = src_buffer[i];
+            b_id++;
+        }
+    }
+}
+
+int MyTime_get_hours(MyTime *my_time) {
+    assert(my_time);
+    return my_time->hour;
+}
+int MyTime_get_minutes(MyTime *my_time) {
+    assert(my_time);
+    return my_time->min;
+}
+int MyTime_get_seconds(MyTime *my_time) {
+    assert(my_time);
+    return my_time->sec;
+}
+int MyTime_get_milliseconds(MyTime *my_time) {
+    assert(my_time);
+    return my_time->millisec;
+}
+void MyTime_set_hours(MyTime *my_time, int new_val) {
+    assert(my_time);
+    my_time->hour = new_val;
+}
+void MyTime_set_minutes(MyTime *my_time, int new_val) {
+    assert(my_time);
+    my_time->min = new_val;
+}
+void MyTime_set_seconds(MyTime *my_time, int new_val) {
+    assert(my_time);
+    my_time->sec = new_val;
+}
+void MyTime_set_milliseconds(MyTime *my_time, int new_val) {
+    assert(my_time);
+    my_time->millisec = new_val;
 }
 
 void print_error(char *msg) {
@@ -164,23 +282,4 @@ int get_int_in(int l, int h) {
     } while (n < l || n > h);
 
     return n;
-}
-
-void print_log(LogCode code, FILE *file, char* msg, sem_t *log_mutex) {
-    // get the current time
-    char time_buf[80];
-    get_time_str(time_buf, 80);
-
-    // we must write atomicaly so we call the mutex wait call
-    if (log_mutex)
-        sem_P(log_mutex);
-    // get to the end of file (append only protocol)
-    fseek(file, 0, SEEK_END); 
-    // write the message
-    fprintf(file, "=%d,%s= %s \n", code, time_buf, msg); 
-    // flush the file so there is no buffering
-    fflush(file);
-    if (log_mutex)
-        sem_V(log_mutex);
-    // end of the write (signal the mutex semaphore)
 }

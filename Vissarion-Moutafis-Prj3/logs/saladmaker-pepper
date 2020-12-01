@@ -1,0 +1,8 @@
+=0,22:17:19:54= :pepper: starts working 
+=6,22:17:19:54= :pepper: signaled by :chef: 
+=3,22:17:19:54= :pepper: start cooking salad 
+=4,22:17:22:54= :pepper: salad ready (work time:3 s) 
+=6,22:17:22:54= :pepper: signaled by :chef: 
+=3,22:17:22:54= :pepper: start cooking salad 
+=4,22:17:25:54= :pepper: salad ready (work time:3 s) 
+=1,22:17:25:54= :pepper: finished working 

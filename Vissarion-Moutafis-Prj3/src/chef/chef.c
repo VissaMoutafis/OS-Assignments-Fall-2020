@@ -35,7 +35,7 @@ static int provide_ingredients(Ingredients ingr[], int size, int prev) {
     
     // print the proper log messages
     char msg[150];
-    sprintf(msg, "Signal to salad-maker with main resource '%s'", available_resources[ingr_id]);
+    sprintf(msg, ":chef: signal to salad-maker :%s:", available_resources[ingr_id]);
     print_log(log_code_provide_ingr, logfile, msg, NULL);
     print_log(log_code_provide_ingr, common_log, msg, log_mutex);
     return ingr_id;
@@ -62,7 +62,7 @@ static void print_result_statistics(Order order) {
     char msg[300];
     int salads_per_saladmaker[3];
     memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
-    sprintf(msg, "Results: Salads Done %d/%d,  Salads per salad maker {%d, %d, %d}",
+    sprintf(msg, ":chef: Salads Done %d/%d, Salads per salad maker {%d, %d, %d}, concurrent-work-list: /*TODO*/",
             init_salads - order.shmem->num_of_salads, init_salads,
             salads_per_saladmaker[0], salads_per_saladmaker[1],
             salads_per_saladmaker[2]);
@@ -73,8 +73,8 @@ static void print_result_statistics(Order order) {
 // main loop for the chef behaviour
 static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t* table, int mantime) {
     // print beggining log
-    print_log(log_code_start, logfile, "Chef begins distributing ingredients to the salad makers", NULL);
-    print_log(log_code_start, common_log, "Chef begins distributing ingredients to the salad makers", log_mutex);
+    print_log(log_code_start, logfile, ":chef: begins distributing ingredients to the salad makers", NULL);
+    print_log(log_code_start, common_log, ":chef: begins distributing ingredients to the salad makers", log_mutex);
 
     int prev_ingr_id = -1;
     while (!check_done(order)){
@@ -93,8 +93,8 @@ static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t
     }
 
     // print ending log and results
-    print_log(log_code_end, logfile, "Chef stopped ingredients distribution", NULL);
-    print_log(log_code_end, common_log, "Chef stopped ingredients distribution", log_mutex);
+    print_log(log_code_end, logfile, ":chef: stopped ingredients distribution", NULL);
+    print_log(log_code_end, common_log, ":chef: stopped ingredients distribution", log_mutex);
     print_result_statistics(order);
 }
 
@@ -126,7 +126,7 @@ static int create_order(Order *order, int number_of_salads) {
         return ORDER_FAILURE_CRT;
     }
     // some logging for later use
-    fprintf(logfile, "Shared Memmory ID: %d\n", order->shm_id);
+    printf("Shared Memmory ID: %d\n", order->shm_id);
     
     // if everything ok, then attach the process to the shared memory part
     order->shmem = (SharedMem*)shm_attach(order->shm_id);

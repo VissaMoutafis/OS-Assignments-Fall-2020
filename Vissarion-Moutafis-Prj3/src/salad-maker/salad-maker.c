@@ -36,7 +36,7 @@ static void require_ingredient(Order order, Ingredients ingredient) {
     if (!check_done(order)) {
         sem_print(salad_maker_name, ingredient);
         char log_buf[100];
-        sprintf(log_buf, ":%s: received the 2 needed ingredients", salad_maker_name);
+        sprintf(log_buf, ":%s: signaled by :chef:", salad_maker_name);
         print_log(log_code_receive_ingr, logfile, log_buf, NULL);
         print_log(log_code_receive_ingr, common_log, log_buf, log_mutex);
     }
@@ -44,13 +44,13 @@ static void require_ingredient(Order order, Ingredients ingredient) {
 
 static void cook_salad(int time) {
     char log_buf[100];
-    sprintf(log_buf, ":%s: Start cooking salad", salad_maker_name);
+    sprintf(log_buf, ":%s: start cooking salad", salad_maker_name);
     print_log(log_code_cook_start, logfile, log_buf, NULL);
     print_log(log_code_cook_start, common_log, log_buf, log_mutex);
     // cook (idle time for the process)
     sleep(time);
     
-    sprintf(log_buf, ":%s: Salad ready! (work time:%d s)", salad_maker_name, time);
+    sprintf(log_buf, ":%s: salad ready (work time:%d s)", salad_maker_name, time);
     print_log(log_code_cook_end, logfile, log_buf, NULL);
     print_log(log_code_cook_end, common_log, log_buf, log_mutex);
 }
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 
     // print initial messages to both personal and public logs
     char log_buf[100];
-    sprintf(log_buf, ":%s: starts working...", salad_maker_name);
+    sprintf(log_buf, ":%s: starts working", salad_maker_name);
     print_log(log_code_start, logfile, log_buf, NULL);
     print_log(log_code_start, common_log, log_buf, log_mutex);
 
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
             deliver_salad(&order);                
         }        
     } while (!check_done(order));
-    sprintf(log_buf, ":%s: finished working...", salad_maker_name);
+    sprintf(log_buf, ":%s: finished working", salad_maker_name);
     print_log(log_code_end, logfile, log_buf, NULL);
     print_log(log_code_end, common_log, log_buf, log_mutex);
     // check out of the store
