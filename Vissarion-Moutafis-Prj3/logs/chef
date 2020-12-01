@@ -1,9 +1,0 @@
-=0,22:17:10:72= :chef: begins distributing ingredients to the salad makers 
-=5,22:17:10:72= :chef: signal to salad-maker :pepper: 
-=5,22:17:19:54= :chef: signal to salad-maker :onion: 
-=5,22:17:20:54= :chef: signal to salad-maker :pepper: 
-=5,22:17:22:54= :chef: signal to salad-maker :tomato: 
-=5,22:17:23:54= :chef: signal to salad-maker :pepper: 
-=5,22:17:25:54= :chef: signal to salad-maker :tomato: 
-=1,22:17:26:54= :chef: stopped ingredients distribution 
-=2,22:17:26:54= :chef: Salads Done 3/3, Salads per salad maker {0, 1, 2}, concurrent-work-list: /*TODO*/ 

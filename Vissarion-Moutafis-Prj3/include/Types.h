@@ -25,7 +25,6 @@
 #define ONION "onion"
 #define PEPPER "pepper"
 #define MUTEX "salad-mutex"
-#define SALAD_WORKER "salad-workers-out"
 #define WORKING_TABLE "working-table"
 #define LOG_MUTEX "salad-log-mutex"
 
@@ -58,6 +57,7 @@ typedef enum {
 typedef struct {
     int salads_per_saladmaker[3];
     int num_of_salads;
+    int num_of_finished;
 } SharedMem;
 
 // order struct protorype

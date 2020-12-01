@@ -57,17 +57,54 @@ static bool check_done(Order order) {
     return n <= 0;
 }
 
+static bool check_workers_done(Order *order) {
+    // we need to check everything atomicaly
+    sem_P(mutex);
+    int n = order->shmem->num_of_finished;
+    sem_V(mutex);
+
+    return n == 3;
+}
+
 // function to print the final statistics for the salad makers 
 static void print_result_statistics(Order order) {
-    char msg[300];
+    char msg[BUFSIZ], temp_msg[BUFSIZ];
     int salads_per_saladmaker[3];
     memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
-    sprintf(msg, ":chef: Salads Done %d/%d, Salads per salad maker {%d, %d, %d}, concurrent-work-list: /*TODO*/",
+    int interval_counters[3] = {0, 0, 0};
+    char *usr[3] = {TOMATO, ONION, PEPPER};
+    MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);
+
+    sprintf(temp_msg, ":chef: Salads Done %d/%d, Salads per salad maker {%d, %d, %d}, concurrent-work-list: ",
             init_salads - order.shmem->num_of_salads, init_salads,
             salads_per_saladmaker[0], salads_per_saladmaker[1],
             salads_per_saladmaker[2]);
+    strcat(msg, temp_msg);
+
+    for (int i = 0; i < 3; i ++) {
+        sprintf(temp_msg, "%s: ", usr[i]);
+        strcat(msg, temp_msg);
+        for (int j = 0; j < interval_counters[i]; j++) {
+            char start_buf[12], end_buf[12];
+            memset(start_buf, 0, 12);
+            memset(end_buf, 0, 12);
+            MyTime_time_to_str(&intervals[i][j].start, start_buf, 12);
+            MyTime_time_to_str(&intervals[i][j].end, end_buf, 12);
+            sprintf(temp_msg, "[%s - %s] ", start_buf, end_buf);
+            strcat(msg, temp_msg);
+        }
+        if (i < 2) {
+            sprintf(temp_msg, " - ");
+            strcat(msg, temp_msg);
+        }
+    }
     print_log(log_code_stats, logfile, msg, NULL);
     print_log(log_code_stats, common_log, msg, log_mutex);
+
+    for (int i = 0; i < 3; i ++)
+            free(intervals[i]);
+
+    free(intervals);
 }
 
 // main loop for the chef behaviour
@@ -95,26 +132,17 @@ static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t
     // print ending log and results
     print_log(log_code_end, logfile, ":chef: stopped ingredients distribution", NULL);
     print_log(log_code_end, common_log, ":chef: stopped ingredients distribution", log_mutex);
-    print_result_statistics(order);
 }
 
 // function to dettach and destroy relative shared memory segments (shmids and semaphores)
-static void close_store(sem_t* workers_done, char** ingr_names, Ingredients* ingr, int ingr_size, ShmPair* shm_table, int shm_table_size) {
-    // wait for workers to end
-    printf("Trying to clear\n");
-    sem_P(workers_done);
-    //clear the semaphore
-    sem_clear(SALAD_WORKER, workers_done);
-    
+static void close_store(char** sem_names, sem_t** sem, int sem_size, ShmPair* shm_table, int shm_table_size) {    
     // shared memory segments destruction
-    for (int i = 0; i < ingr_size; i++) 
-        sem_clear(ingr_names[i], ingr[i]);
+    for (int i = 0; i < sem_size; i++) 
+        sem_clear(sem_names[i], sem[i]);
     
     // semaphore destruction
     for (int i = 0; i < shm_table_size; i++)
         shm_destroy(shm_table[i].shm_id);
-    
-    printf("Done clearing\n");
 }
 
 // function to create the order (the shared memory part)
@@ -207,7 +235,6 @@ int main(int argc, char* argv[]) {
     // create a log mutex so that the process writes to the public log atomically
     log_mutex = sem_create(LOG_MUTEX, 1);
     // the semaphore that will signal the end of all workers (wait on it before free everything)
-    sem_t *children_done = sem_create(SALAD_WORKER, 1);
     // the semaphore that will signal when the salad maker took the ingredients, chef provided him with
     sem_t *table = sem_create(WORKING_TABLE, 1);
 
@@ -216,14 +243,22 @@ int main(int argc, char* argv[]) {
     // go to the chef behaviour (main loop and final logging at the end)
     chef_behaviour(order, ingr, 3, table, mantime);
 
-    // close the store (dettach everything and release them properly)
     ShmPair shm_table[] = {order};
-    close_store(children_done, available_resources, ingr, 3, shm_table, 1);
 
-    // clear the rest manually (files, sems etc)
-    sem_clear(WORKING_TABLE, table);
-    sem_clear(MUTEX, mutex);
-    sem_clear(LOG_MUTEX, log_mutex);
+
+    printf("Trying to clear (waiting for workers to finish)\n");
+    // wait for every body to finish
+    while (!check_workers_done(&order));
+
+    // print final results
+    print_result_statistics(order);
+
+    // close the store (dettach everything and release them properly)
+    sem_t *sems[] = {tomato, onion, pepper, mutex, log_mutex, table};
+    char * names[] = {TOMATO, ONION, PEPPER, MUTEX, LOG_MUTEX, WORKING_TABLE};
+    close_store(names, sems, 6, shm_table, 1);
+    printf("Done clearing\n");
+
     fclose(logfile);
     fclose(common_log);
     free(parsed);

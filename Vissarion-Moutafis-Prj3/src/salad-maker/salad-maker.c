@@ -142,8 +142,6 @@ int main(int argc, char *argv[]) {
     // acquire the mutex
     mutex = sem_retrieve(MUTEX);
     log_mutex = sem_retrieve(LOG_MUTEX);
-    // acquire the card semaphore so that you check in and check out of the procedure
-    sem_t *card = sem_retrieve(SALAD_WORKER);
     // acquire the table semaphore so that you signal the chef that everything is ok 
     sem_t * table = sem_retrieve(WORKING_TABLE);
     // get the salad makers indexing based on the realtive enum type (in order to increase the proper salad counter in the shared memory)
@@ -155,8 +153,6 @@ int main(int argc, char *argv[]) {
     print_log(log_code_start, logfile, log_buf, NULL);
     print_log(log_code_start, common_log, log_buf, log_mutex);
 
-    // check in for work (don't block on the sem, however the return value)
-    sem_P_nonblock(card);
     do {
         // request ingredients
         require_ingredient(order, ingr);
@@ -173,12 +169,15 @@ int main(int argc, char *argv[]) {
     sprintf(log_buf, ":%s: finished working", salad_maker_name);
     print_log(log_code_end, logfile, log_buf, NULL);
     print_log(log_code_end, common_log, log_buf, log_mutex);
-    // check out of the store
-    sem_V(card);
+    
+    // make sure you submit that you're done
+    // increase the counter of done workers
+    sem_P(mutex);
+    order.shmem->num_of_finished += 1;
+    sem_V(mutex);
 
     // dettach process from the semaphores
     sem_dettach(ingr);
-    sem_dettach(card);
     sem_dettach(mutex);
     sem_dettach(log_mutex);
     sem_dettach(table);
