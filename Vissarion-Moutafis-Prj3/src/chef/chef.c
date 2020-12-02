@@ -74,7 +74,7 @@ static void print_result_statistics(Order order) {
     int interval_counters[3] = {0, 0, 0};
     char *usr[3] = {TOMATO, ONION, PEPPER};
     MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);
-
+    MyTimeInterval * concurrent_work_intervals = find_concurrent_intervals(intervals, 3, interval_counters, MyTime_compare);
     sprintf(temp_msg, ":chef: Salads Done %d/%d, Salads per salad maker {%d, %d, %d}, concurrent-work-list: ",
             init_salads - order.shmem->num_of_salads, init_salads,
             salads_per_saladmaker[0], salads_per_saladmaker[1],
@@ -82,20 +82,20 @@ static void print_result_statistics(Order order) {
     strcat(msg, temp_msg);
 
     for (int i = 0; i < 3; i ++) {
-        sprintf(temp_msg, "%s: ", usr[i]);
-        strcat(msg, temp_msg);
+        printf("%s: ", usr[i]);
+        // strcat(msg, temp_msg);
         for (int j = 0; j < interval_counters[i]; j++) {
             char start_buf[12], end_buf[12];
             memset(start_buf, 0, 12);
             memset(end_buf, 0, 12);
             MyTime_time_to_str(&intervals[i][j].start, start_buf, 12);
             MyTime_time_to_str(&intervals[i][j].end, end_buf, 12);
-            sprintf(temp_msg, "[%s - %s] ", start_buf, end_buf);
-            strcat(msg, temp_msg);
+            printf(temp_msg, "[%s - %s] ", start_buf, end_buf);
+            // strcat(msg, temp_msg);
         }
         if (i < 2) {
-            sprintf(temp_msg, " - ");
-            strcat(msg, temp_msg);
+            printf( " - ");
+            // strcat(msg, temp_msg);
         }
     }
     print_log(log_code_stats, logfile, msg, NULL);

@@ -62,7 +62,9 @@ void MyTime_time_to_str(MyTime *my_time, char *buffer, int buf_size);
 void MyTime_str_to_time(MyTime *my_time, char *src_buffer, int src_buf_size);
 // copy the src time struct to the dest one
 void MyTime_copy(MyTime *dest, MyTime src);
-
+// compare 2 time intervals
+// return >0 if t1 > t2, 0 if t1 == t2, <0 otherwise
+int MyTime_compare(MyTime *t1, MyTime *t2);
 
 // Argument parsing utilities
 int find_arg_index(char *arg_list[], int argc, char *arg);

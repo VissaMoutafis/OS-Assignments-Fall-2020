@@ -6,6 +6,111 @@
 #include <time.h>
 #include "ParsingUtils.h"
 #include "Sem.h"
+#include "Stack.h"
+#include "PQ.h"
+#include <assert.h>
+
+typedef struct {
+    MyTimeInterval *interval;
+    int overlaps;
+} *IntervalPair;
+
+
+void *make_interval(MyTime start, MyTime end) {
+    MyTimeInterval *i = malloc(sizeof(*i));
+    MyTime_copy(&i->start, start);
+    MyTime_copy(&i->end, end);
+
+    return (void *)i;
+}
+void destroy_interval(void *i) {
+    free(i);
+}
+
+int compare_intervals(void *a, void *b) {
+    MyTimeInterval *i1, *i2;
+    i1 = (MyTimeInterval*)a;
+    i2 = (MyTimeInterval*)b;
+
+    int s = MyTime_compare(&i1->start, &i2->start);
+    int e = MyTime_compare(&i1->end, &i2->end);
+    
+    if (s) return s;
+    if (e) return e;
+    return 1;
+}
+int compare_interval_pairs(void *a, void *b) {
+    return compare_intervals(((IntervalPair)a)->interval, ((IntervalPair)b)->interval);
+}
+void destroy_interval_pairs(void *a) {
+    destroy_interval(((IntervalPair)a)->interval);
+}
+void *make_interval_pair(MyTimeInterval* interval) {
+    IntervalPair p = malloc(sizeof(*p));
+    p->interval = interval;
+    p->overlaps = 0;
+
+    return (void*)p;
+}
+
+static bool interval_overlap(MyTimeInterval *i1, MyTimeInterval *i2) {
+    MyTimeInterval *min = compare_intervals(i1, i2) <= 0 ? i1 : i2;
+    MyTimeInterval *max = min == i1 ? i2 : i1;
+
+    // they overlap only if the min's ending timestamp
+    // is greater or equal to the max's starting timestamp
+    return MyTime_compare(&min->end, &max->start) < 0;  
+}
+
+MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int intervals_size, int *interval_counters) {
+    PQ intervals_pq = pq_create(compare_intervals, NULL);    
+    Stack interval_stack = stack_create(compare_interval_pairs, destroy_interval_pairs);    
+
+    // push all the intervals in a PQ
+    for (int i = 0; i < intervals_size; i++) 
+        for (int j = 0; j < interval_counters[i]; j++)
+            pq_push(intervals_pq, make_interval(intervals[i][j].start, intervals[i][j].end));
+
+
+    // While the PQ is not empty
+    while (!pq_empty(intervals_pq)) {
+        // first we take the min
+        MyTimeInterval *interval = pq_pop(intervals_pq);
+        if (!stack_empty(interval_stack)) {
+            IntervalPair first_pair = (IntervalPair)stackNode_get_item(stack_get_first(interval_stack));
+            // debbuging line
+            assert(first_pair);
+            // check if the interval and the first stack's interval overlap
+            if (interval_overlap(interval, first_pair->interval)) {
+                // increase the overlaps count
+                first_pair->overlaps++;
+                // check if the ending timestamp is greater 
+                // than the relative one in the first_pair
+                // if it is updates stacks occurence
+                if (MyTime_compare(&interval->end, &first_pair->interval->end) > 0 ) 
+                    MyTime_copy(&first_pair->interval->end, interval->end);
+
+                // free the interval since it's no longer needed
+                destroy_interval(interval);
+            
+            } else {
+                // if they don't overlap, then add the just-removed-interval to the stack
+                stack_push(interval_stack, make_interval_pair(interval));
+            }
+        } else {
+            stack_push(interval_stack, make_interval_pair(interval));
+        }
+    }
+
+    // at this point the stack has all of the overlapping intervals
+    while (!stack_empty(interval_stack)) {
+        IntervalPair pair = 
+    }
+
+    pq_destroy(intervals_pq);
+    stack_destroy(&interval_stack);
+}
+
 
 // a typedefed enum type needed for the string-parsing-to-MyTime struct-function
 typedef enum { hours = 0, minutes = 1, seconds = 2, milliseconds = 3 } TimePart;
@@ -32,6 +137,28 @@ void MyTime_copy(MyTime *dest, MyTime src) {
     dest->min = src.min;
     dest->sec = src.sec;
     dest->millisec = src.millisec;
+}
+
+static int cmp_time(int a, int b) {
+    return a - b;
+}
+
+int MyTime_compare(MyTime *t1, MyTime *t2) {
+    int cmp_h = cmp_time(t1->hour, t2->hour);
+    int cmp_m = cmp_time(t1->min, t2->min);
+    int cmp_s = cmp_time(t1->sec, t2->sec);
+    int cmp_ms = cmp_time(t1->millisec, t2->millisec);
+
+    if (cmp_h)
+        return cmp_h;
+    // cmp_h = 0
+    if (cmp_m)
+        return cmp_m;
+    // cmp_m = 0
+    if (cmp_s)
+        return cmp_s;
+    // cmp_s = 0
+    return cmp_m;
 }
 
 void MyTime_get_time(MyTime *my_time) {
