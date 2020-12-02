@@ -79,3 +79,9 @@ MyTimeInterval **get_time_intervals_from_log(char *log_name, LogCode start_code,
                                              LogCode end_code, char *usr_list[],
                                              int usr_list_size,
                                              int interval_counters[]);
+
+
+// extra features:
+
+// return the concurrent intervals. WARNING some places in the returned array might be null
+MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int intervals_size, int *interval_counters, int *concurrent_size);

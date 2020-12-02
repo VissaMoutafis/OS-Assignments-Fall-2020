@@ -26,5 +26,8 @@ void stack_push(Stack stack, Pointer entry);
 // de allocate the stack
 void stack_destroy(Stack *stack);
 
+// get the number of the elements in the stack
+int stack_len(Stack stack);
+
 //Some basic functionalities for a stack node
 Pointer stackNode_get_item(StackNode node);

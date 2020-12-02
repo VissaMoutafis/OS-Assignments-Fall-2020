@@ -69,42 +69,54 @@ static bool check_workers_done(Order *order) {
 // function to print the final statistics for the salad makers 
 static void print_result_statistics(Order order) {
     char msg[BUFSIZ], temp_msg[BUFSIZ];
+    memset(msg, 0, BUFSIZ);
+    memset(temp_msg, 0, BUFSIZ);
     int salads_per_saladmaker[3];
+    int concurrent_size = 0;
     memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
     int interval_counters[3] = {0, 0, 0};
     char *usr[3] = {TOMATO, ONION, PEPPER};
     MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);
-    MyTimeInterval * concurrent_work_intervals = find_concurrent_intervals(intervals, 3, interval_counters, MyTime_compare);
+    MyTimeInterval * concurrent_work_intervals = find_concurrent_intervals(intervals, 3, interval_counters, &concurrent_size);
     sprintf(temp_msg, ":chef: Salads Done %d/%d, Salads per salad maker {%d, %d, %d}, concurrent-work-list: ",
-            init_salads - order.shmem->num_of_salads, init_salads,
-            salads_per_saladmaker[0], salads_per_saladmaker[1],
+            init_salads - order.shmem->num_of_salads, 
+            init_salads,
+            salads_per_saladmaker[0], 
+            salads_per_saladmaker[1],
             salads_per_saladmaker[2]);
     strcat(msg, temp_msg);
 
-    for (int i = 0; i < 3; i ++) {
-        printf("%s: ", usr[i]);
-        // strcat(msg, temp_msg);
-        for (int j = 0; j < interval_counters[i]; j++) {
-            char start_buf[12], end_buf[12];
-            memset(start_buf, 0, 12);
-            memset(end_buf, 0, 12);
-            MyTime_time_to_str(&intervals[i][j].start, start_buf, 12);
-            MyTime_time_to_str(&intervals[i][j].end, end_buf, 12);
-            printf(temp_msg, "[%s - %s] ", start_buf, end_buf);
-            // strcat(msg, temp_msg);
-        }
-        if (i < 2) {
-            printf( " - ");
-            // strcat(msg, temp_msg);
-        }
+    for (int i = 0; i < concurrent_size; i ++) {
+        char start_buf[12], end_buf[12];
+        memset(start_buf, 0, 12);
+        memset(end_buf, 0, 12);
+        MyTime_time_to_str(&concurrent_work_intervals[i].start, start_buf, 12);
+        MyTime_time_to_str(&concurrent_work_intervals[i].end, end_buf, 12);
+        sprintf(temp_msg, "[%s - %s] ", start_buf, end_buf);
+        strcat(msg, temp_msg);
     }
     print_log(log_code_stats, logfile, msg, NULL);
     print_log(log_code_stats, common_log, msg, log_mutex);
+
+        for (int i = 0; i < 3; i ++) {
+            printf("Time intervals for %s:\n", usr[i]);
+            for (int j = 0; j < interval_counters[i]; j++) {
+                printf("[%d:%d:%d:%d - %d:%d:%d:%d] ",
+                intervals[i][j].start.hour,
+                       intervals[i][j].start.min, intervals[i][j].start.sec,
+                       intervals[i][j].start.millisec,
+                       intervals[i][j].end.hour, intervals[i][j].end.min,
+                       intervals[i][j].end.sec,
+                       intervals[i][j].end.millisec);
+            }
+            printf("\n");
+        }
 
     for (int i = 0; i < 3; i ++)
             free(intervals[i]);
 
     free(intervals);
+    free(concurrent_work_intervals);
 }
 
 // main loop for the chef behaviour

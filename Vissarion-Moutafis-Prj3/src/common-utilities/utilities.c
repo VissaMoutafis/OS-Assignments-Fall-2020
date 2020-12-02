@@ -39,6 +39,7 @@ int compare_intervals(void *a, void *b) {
     if (e) return e;
     return 1;
 }
+
 int compare_interval_pairs(void *a, void *b) {
     return compare_intervals(((IntervalPair)a)->interval, ((IntervalPair)b)->interval);
 }
@@ -59,10 +60,10 @@ static bool interval_overlap(MyTimeInterval *i1, MyTimeInterval *i2) {
 
     // they overlap only if the min's ending timestamp
     // is greater or equal to the max's starting timestamp
-    return MyTime_compare(&min->end, &max->start) < 0;  
+    return MyTime_compare(&min->end, &max->start) > 0;  
 }
 
-MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int intervals_size, int *interval_counters) {
+MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int intervals_size, int *interval_counters, int *concurrent_size) {
     PQ intervals_pq = pq_create(compare_intervals, NULL);    
     Stack interval_stack = stack_create(compare_interval_pairs, destroy_interval_pairs);    
 
@@ -71,6 +72,8 @@ MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int interv
         for (int j = 0; j < interval_counters[i]; j++)
             pq_push(intervals_pq, make_interval(intervals[i][j].start, intervals[i][j].end));
 
+
+    // The following procedure will merge all the time intervals (and note when overlaps happen)
 
     // While the PQ is not empty
     while (!pq_empty(intervals_pq)) {
@@ -82,6 +85,7 @@ MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int interv
             assert(first_pair);
             // check if the interval and the first stack's interval overlap
             if (interval_overlap(interval, first_pair->interval)) {
+                printf("\n------\n");
                 // increase the overlaps count
                 first_pair->overlaps++;
                 // check if the ending timestamp is greater 
@@ -102,13 +106,33 @@ MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int interv
         }
     }
 
-    // at this point the stack has all of the overlapping intervals
+    // at this point the stack has all of the merged overlapping intervals
+    // so we must add them to an array and return it
+    MyTimeInterval *concurrent = calloc(stack_len(interval_stack), sizeof(*concurrent));
+    int i = 0;
     while (!stack_empty(interval_stack)) {
-        IntervalPair pair = 
+        // pop the first element
+        IntervalPair pair = (IntervalPair)stack_pop(interval_stack);
+        assert(pair); // debbuging
+        // check if it is actually a concurrent-work interval
+        if (pair->overlaps) {
+            // debbuging
+            assert(i <= stack_len(interval_stack));
+            // insert the interval to the list
+            MyTime_copy(&concurrent[i].start, pair->interval->start);
+            MyTime_copy(&concurrent[i].end, pair->interval->end);
+            // and increase the counter
+            i ++;
+        }
+        // destroy the interval since its no longer needed
+        destroy_interval_pairs(pair);
     }
-
+    
     pq_destroy(intervals_pq);
     stack_destroy(&interval_stack);
+
+    *concurrent_size = i;
+    return concurrent;
 }
 
 
@@ -158,7 +182,7 @@ int MyTime_compare(MyTime *t1, MyTime *t2) {
     if (cmp_s)
         return cmp_s;
     // cmp_s = 0
-    return cmp_m;
+    return cmp_ms;
 }
 
 void MyTime_get_time(MyTime *my_time) {

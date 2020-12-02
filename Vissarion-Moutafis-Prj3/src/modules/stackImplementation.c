@@ -65,6 +65,9 @@ void stack_push(Stack stack, Pointer entry) {
 }
 
 void stack_destroy(Stack *stack) {
+    assert(stack);
+    assert(*stack);
+
     StackNode next, n = (*stack)->head;
     
     while (n) {
@@ -74,5 +77,11 @@ void stack_destroy(Stack *stack) {
         free(n);
         n = next;
     }
+    free(*stack);
     *stack = NULL;
+}
+
+int stack_len(Stack stack) {
+    assert(stack);
+    return stack->len;
 }
