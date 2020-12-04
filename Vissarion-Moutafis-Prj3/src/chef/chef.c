@@ -92,7 +92,7 @@ static void print_result_statistics(Order order) {
         memset(end_buf, 0, 12);
         MyTime_time_to_str(&concurrent_work_intervals[i].start, start_buf, 12);
         MyTime_time_to_str(&concurrent_work_intervals[i].end, end_buf, 12);
-        sprintf(temp_msg, "[%s - %s] ", start_buf, end_buf);
+        sprintf(temp_msg, "\n[%s - %s] ", start_buf, end_buf);
         strcat(msg, temp_msg);
     }
     print_log(log_code_stats, logfile, msg, NULL);
