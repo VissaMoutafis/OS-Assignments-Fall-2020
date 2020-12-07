@@ -32,27 +32,32 @@ static bool check_done(Order order) {
 }
 
 static void require_ingredient(Order order, Ingredients ingredient) {
+    char log_buf[100];
+    sprintf(log_buf, "Waiting for ingredients");
+    print_log(log_code_wait_ingr, logfile, salad_maker_name, log_buf, NULL);
+    print_log(log_code_wait_ingr, common_log, salad_maker_name, log_buf, log_mutex);
+
     while (!check_done(order) && sem_P_nonblock(ingredient) < 0);
     if (!check_done(order)) {
         sem_print(salad_maker_name, ingredient);
-        char log_buf[100];
-        sprintf(log_buf, ":%s: signaled by :chef:", salad_maker_name);
-        print_log(log_code_receive_ingr, logfile, log_buf, NULL);
-        print_log(log_code_receive_ingr, common_log, log_buf, log_mutex);
+
+        sprintf(log_buf, "Get Ingredients");
+        print_log(log_code_receive_ingr, logfile, salad_maker_name, log_buf, NULL);
+        print_log(log_code_receive_ingr, common_log, salad_maker_name, log_buf, log_mutex);
     }
 }
 
 static void cook_salad(int time) {
     char log_buf[100];
-    sprintf(log_buf, ":%s: start cooking salad", salad_maker_name);
-    print_log(log_code_cook_start, logfile, log_buf, NULL);
-    print_log(log_code_cook_start, common_log, log_buf, log_mutex);
+    sprintf(log_buf, "Start cooking salad");
+    print_log(log_code_cook_start, logfile, salad_maker_name, log_buf, NULL);
+    print_log(log_code_cook_start, common_log, salad_maker_name, log_buf, log_mutex);
     // cook (idle time for the process)
     sleep(time);
     
-    sprintf(log_buf, ":%s: salad ready (work time:%d s)", salad_maker_name, time);
-    print_log(log_code_cook_end, logfile, log_buf, NULL);
-    print_log(log_code_cook_end, common_log, log_buf, log_mutex);
+    sprintf(log_buf, "Finished cooking salad.(%d s)", time);
+    print_log(log_code_cook_end, logfile, salad_maker_name, log_buf, NULL);
+    print_log(log_code_cook_end, common_log, salad_maker_name, log_buf, log_mutex);
 }
 
 static void deliver_salad(Order *order) {
@@ -135,7 +140,12 @@ int main(int argc, char *argv[]) {
 
     // acquire the ingredient semaphores
     strcpy(ingredient_name, argv[8]);
-    salad_maker_name =  ingredient_name;
+    if (strcmp(ingredient_name, TOMATO) == 0)
+        salad_maker_name = "Saladmaker1";
+    else if (strcmp(ingredient_name, ONION) == 0)
+        salad_maker_name = "Saladmaker2";
+    else
+        salad_maker_name = "Saladmaker3";
     Ingredients ingr = set_ingredient_semaphores(ingredient_name);
     if (ingr == NULL)
         perror("retrieving sems at workers");
@@ -147,11 +157,6 @@ int main(int argc, char *argv[]) {
     // get the salad makers indexing based on the realtive enum type (in order to increase the proper salad counter in the shared memory)
     get_index(ingredient_name);
 
-    // print initial messages to both personal and public logs
-    char log_buf[100];
-    sprintf(log_buf, ":%s: starts working", salad_maker_name);
-    print_log(log_code_start, logfile, log_buf, NULL);
-    print_log(log_code_start, common_log, log_buf, log_mutex);
 
     do {
         // request ingredients
@@ -166,9 +171,6 @@ int main(int argc, char *argv[]) {
             deliver_salad(&order);                
         }        
     } while (!check_done(order));
-    sprintf(log_buf, ":%s: finished working", salad_maker_name);
-    print_log(log_code_end, logfile, log_buf, NULL);
-    print_log(log_code_end, common_log, log_buf, log_mutex);
     
     // make sure you submit that you're done
     // increase the counter of done workers

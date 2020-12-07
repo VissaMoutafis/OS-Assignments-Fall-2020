@@ -3,7 +3,7 @@
 #include "ParsingUtils.h"
 #include "Sem.h"
 
-void print_log(LogCode code, FILE *file, char *msg, sem_t *log_mutex) {
+void print_log(LogCode code, FILE *file, char* process_name, char *msg, sem_t *log_mutex) {
     // get the current time
     char time_buf[80];
     get_time_str(time_buf, 80);
@@ -13,41 +13,50 @@ void print_log(LogCode code, FILE *file, char *msg, sem_t *log_mutex) {
     // get to the end of file (append only protocol)
     fseek(file, 0, SEEK_END);
     // write the message
-    fprintf(file, "=%d,%s= %s \n", code, time_buf, msg);
+    fprintf(file, "[%d] [%s] [%d] [%s] [%s]\n", code, time_buf, getpid(), process_name, msg);
     // flush the file so there is no buffering
     fflush(file);
     if (log_mutex) sem_V(log_mutex);
     // end of the write (signal the mutex semaphore)
 }
 
+static bool is_bracket(char ch) {
+    return ch == '[' || ch == ']';
+}
+
 static LogCode get_log_code(char *log_line){
-    // we assume that the line begins with '='
-    int ch = log_line[0];
+    // General logline format [code] [timestamp] [pid] [proc name] [msg]
     char buf[10];
     memset(buf, 0, 10);
-    if (ch == '=') {
-        int i = 1;
-        while((ch = log_line[i]) != ',') {
-            buf[i-1] = ch;
-            i ++;
+    int brackets = 0;
+    int buf_id = 0;
+    for (int i = 0; brackets < 2 && i < strlen(log_line); i++) {
+        if (is_bracket(log_line[i]))
+            brackets++;
+        else {
+            assert(buf_id < 10);
+            buf[buf_id] = log_line[i];
         }
-    }
-    // debugging line:
-    assert(ch == ',');
+    } 
 
     return atoi(buf);
 }
 
 static MyTime get_timestamp(char *log_line) {
-    // we know that the log lines have the following format "=code,timestamp= logmessage"
+    // General logline format [code] [timestamp] [pid] [proc name] [msg]
     int i = 0;
-    while (log_line[i] && log_line[i] != ',') i++;
+    int brackets = 0;
+    while (brackets < 3){
+        if (is_bracket(log_line[i]))
+            brackets ++;
+        i++;
+    } 
 
-    assert(log_line[i] == ',');
+    assert(is_bracket(log_line[i-1]));
     // get the time string
     char time_buf[12];
     memset(time_buf, 0, 12);
-    strncpy(time_buf, &log_line[i+1], 11);
+    strncpy(time_buf, &log_line[i], 11);
 
     // get the time and return it in a struct
     MyTime t;
@@ -57,30 +66,28 @@ static MyTime get_timestamp(char *log_line) {
 }
 // write the user of the logline to the usr_buf
 static void get_usr(char* log_line, char *usr_buf, int usr_buf_size) {
-    // we know that the log lines have the following format 
-    // "=code,timestamp= :user: rest of log message"
+    // General logline format [code] [timestamp] [pid] [proc name] [msg]
+    int i = 0;
+    int brackets = 0;
+    while (brackets < 7) {
+        if (is_bracket(log_line[i])) brackets++;
+        i++;
+    }
 
-    int i = 1;
-    // first get to end of the =code,timestamp= section
-    while (log_line[i] && log_line[i] != '=') i++;
-    // get to the start of :user: section
-    while (log_line[i] && log_line[i] != ':') i++;
-    
-    // debugging line
-    assert(log_line[i] == ':');
+    assert(is_bracket(log_line[i-1]));
 
     char usr[100];
     memset(usr, 0, 100);
     int usr_i = 0;
     int j;
     // copy it to the usr buffer
-    for (j = i+1; log_line[j] != ':'; j++) {
+    for (j = i; log_line[i] && !is_bracket(log_line[j]); j++) {
         usr[usr_i] = log_line[j];
         usr_i++;
     }
 
     //debbuging line
-    assert(log_line[j] == ':');
+    assert(is_bracket(log_line[j]));
     // copy the usr buffer to the usr_buf string and return
     if (strlen(usr) >= usr_buf_size) {
         fprintf(stderr, "get_usr in log-utilities.c: The given buf is to small to hold the user");
@@ -172,7 +179,7 @@ MyTimeInterval** get_time_intervals_from_log(char *log_name, LogCode start_code,
 
 // int main(void) {
 //     char *path ="../../logs/common-log";
-//     char *usr[] = {TOMATO, ONION, PEPPER};
+//     char *usr[] = {"Saladmaker1", "Saladmaker2", "Saladmaker3"};
 //     int interval_counters[3];
 //     MyTimeInterval **intervals = get_time_intervals_from_log(path, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);  
 

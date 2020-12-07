@@ -74,7 +74,7 @@ bool check_args(int argc, char* argv[], char* proper_args[], int proper_args_siz
 
 // write a log message to the specified file 
 // (if the log_mutex is not null then write it atomically)
-void print_log(LogCode code, FILE *file, char *msg, sem_t *log_mutex);
+void print_log(LogCode code, FILE *file, char* process_name, char *msg, sem_t *log_mutex);
 MyTimeInterval **get_time_intervals_from_log(char *log_name, LogCode start_code,
                                              LogCode end_code, char *usr_list[],
                                              int usr_list_size,

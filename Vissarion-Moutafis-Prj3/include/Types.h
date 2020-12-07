@@ -45,12 +45,13 @@ typedef sem_t* Ingredients;
 typedef enum {tomato=0, onion=1, pepper=2} SaladMakerIndex;
 
 typedef enum {
-    log_code_start = 0,
-    log_code_end,
+    log_code_select_ingr = 0,
+    log_code_sleep,
     log_code_stats,
     log_code_cook_start,
     log_code_cook_end,
-    log_code_provide_ingr,
+    log_code_notify,
+    log_code_wait_ingr,
     log_code_receive_ingr
 } LogCode;
 

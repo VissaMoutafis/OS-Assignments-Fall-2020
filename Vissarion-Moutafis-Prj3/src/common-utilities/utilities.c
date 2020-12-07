@@ -190,16 +190,16 @@ MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int interv
     for (int max_start_i = 0; max_start_i < size; max_start_i++) {
         count_duplicates = 0;
         for (int min_end_i = 0; min_end_i < size; min_end_i++) {
-            printf("checking intervals [%d:%d - %d:%d] [%d:%d - %d:%d]\n",
-                   max_start[max_start_i].start.sec,
-                   max_start[max_start_i].start.millisec,
-                   max_start[max_start_i].end.sec,
-                   max_start[max_start_i].end.millisec,
-                   min_end[min_end_i].start.sec,
-                   min_end[min_end_i].start.millisec,
-                   min_end[min_end_i].end.sec, min_end[min_end_i].end.millisec);
+            // printf("checking intervals [%d:%d - %d:%d] [%d:%d - %d:%d]\n",
+            //        max_start[max_start_i].start.sec,
+            //        max_start[max_start_i].start.millisec,
+            //        max_start[max_start_i].end.sec,
+            //        max_start[max_start_i].end.millisec,
+            //        min_end[min_end_i].start.sec,
+            //        min_end[min_end_i].start.millisec,
+            //        min_end[min_end_i].end.sec, min_end[min_end_i].end.millisec);
             if (interval_overlap(&max_start[max_start_i], &min_end[min_end_i])) {
-                printf("They overlap\n");
+                // printf("They overlap\n");
                 // if the intervals over lap create a new interval
                 bool same = (compare_intervals(&max_start[max_start_i], &min_end[min_end_i]) == 0);
                 if (same && !count_duplicates)
@@ -225,17 +225,16 @@ MyTimeInterval *find_concurrent_intervals(MyTimeInterval **intervals, int interv
                     MyTime_copy(&concurrent[i-1].start, start);
                     MyTime_copy(&concurrent[i-1].end, end);
                     
-                    printf("Adding it : [%d:%d - %d:%d]\n",
-                           concurrent[i - 1].start.sec,
-                           concurrent[i - 1].start.millisec,
-                           concurrent[i - 1].end.sec,
-                           concurrent[i - 1].end.millisec);
+                    // printf("Adding it : [%d:%d - %d:%d]\n",
+                    //        concurrent[i - 1].start.sec,
+                    //        concurrent[i - 1].start.millisec,
+                    //        concurrent[i - 1].end.sec,
+                    //        concurrent[i - 1].end.millisec);
                     free(old);
                 }
             }
         }
     }
-    // }
     
     // Now we have to merge all the time intervals
     

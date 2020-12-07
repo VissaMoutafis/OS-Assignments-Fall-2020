@@ -23,6 +23,19 @@ static void wait_for_workers(Order order, int num_of_workers, int num_of_resourc
     }
 }
 
+static void choose_ingr(char *a, char *b, int ingr_id) {
+    if (ingr_id == 0) {
+        strcpy(a, ONION);
+        strcpy(b, PEPPER);
+    } else if (ingr_id == 1) {
+        strcpy(a, TOMATO);
+        strcpy(b, PEPPER);
+    } else {
+        strcpy(a, TOMATO);
+        strcpy(b, ONION);
+    }
+} 
+
 // provide ingredients (signal a random semaphore that is never equal to prev)
 static int provide_ingredients(Ingredients ingr[], int size, int prev) {
     int ingr_id;
@@ -30,20 +43,31 @@ static int provide_ingredients(Ingredients ingr[], int size, int prev) {
         ingr_id = rand() % size;
     } while (prev == ingr_id);
 
+    /// print the log
+    char a[40],b[40];
+    choose_ingr(a, b, ingr_id);
+    char msg[150];
+    sprintf(msg, "Selecting ingredients '%s', '%s'", a, b);
+    print_log(log_code_select_ingr, logfile, "Chef", msg, NULL);
+    print_log(log_code_select_ingr, common_log, "Chef", msg, log_mutex);
     // provide the salad maker with 2 ingredients
     sem_V(ingr[ingr_id]);
     
     // print the proper log messages
-    char msg[150];
-    sprintf(msg, ":chef: signal to salad-maker :%s:", available_resources[ingr_id]);
-    print_log(log_code_provide_ingr, logfile, msg, NULL);
-    print_log(log_code_provide_ingr, common_log, msg, log_mutex);
+    sprintf(msg, "Notify Saladmaker%d", ingr_id+1);
+    print_log(log_code_notify, logfile, "Chef", msg, NULL);
+    print_log(log_code_notify, common_log, "Chef", msg, log_mutex);
     return ingr_id;
 }
 
 // take a break (sleep for mantime seconds)
 static void take_a_break(int mantime) {
     // basic sleep
+    char msg[150];
+    sprintf(msg, "Mantime for %d sec", mantime);
+    print_log(log_code_sleep, logfile, "Chef", msg, NULL);
+    print_log(log_code_sleep, common_log, "Chef", msg, log_mutex);
+
     sleep(mantime);
 }
 
@@ -75,10 +99,10 @@ static void print_result_statistics(Order order) {
     int concurrent_size = 0;
     memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
     int interval_counters[3] = {0, 0, 0};
-    char *usr[3] = {TOMATO, ONION, PEPPER};
+    char *usr[3] = {"Saladmaker1", "Saladmaker2", "Saladmaker3"};
     MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);
     MyTimeInterval * concurrent_work_intervals = find_concurrent_intervals(intervals, 3, interval_counters, &concurrent_size);
-    sprintf(temp_msg, ":chef: Salads Done %d/%d, Salads per salad maker {%d, %d, %d}, concurrent-work-list: ",
+    printf("Total #Salads %d/%d\nSalads per salad maker {%d, %d, %d}\nConcurrent work time intervals: ",
             init_salads - order.shmem->num_of_salads, 
             init_salads,
             salads_per_saladmaker[0], 
@@ -92,25 +116,24 @@ static void print_result_statistics(Order order) {
         memset(end_buf, 0, 12);
         MyTime_time_to_str(&concurrent_work_intervals[i].start, start_buf, 12);
         MyTime_time_to_str(&concurrent_work_intervals[i].end, end_buf, 12);
-        sprintf(temp_msg, "\n[%s - %s] ", start_buf, end_buf);
+        printf("\n[%s - %s] ", start_buf, end_buf);
         strcat(msg, temp_msg);
     }
-    print_log(log_code_stats, logfile, msg, NULL);
-    print_log(log_code_stats, common_log, msg, log_mutex);
+    puts("\n");
 
-        for (int i = 0; i < 3; i ++) {
-            printf("Time intervals for %s:\n", usr[i]);
-            for (int j = 0; j < interval_counters[i]; j++) {
-                printf("[%d:%d:%d:%d - %d:%d:%d:%d] ",
-                intervals[i][j].start.hour,
-                       intervals[i][j].start.min, intervals[i][j].start.sec,
-                       intervals[i][j].start.millisec,
-                       intervals[i][j].end.hour, intervals[i][j].end.min,
-                       intervals[i][j].end.sec,
-                       intervals[i][j].end.millisec);
-            }
-            printf("\n");
-        }
+        // for (int i = 0; i < 3; i ++) {
+        //     printf("Time intervals for %s:\n", usr[i]);
+        //     for (int j = 0; j < interval_counters[i]; j++) {
+        //         printf("[%d:%d:%d:%d - %d:%d:%d:%d] ",
+        //         intervals[i][j].start.hour,
+        //                intervals[i][j].start.min, intervals[i][j].start.sec,
+        //                intervals[i][j].start.millisec,
+        //                intervals[i][j].end.hour, intervals[i][j].end.min,
+        //                intervals[i][j].end.sec,
+        //                intervals[i][j].end.millisec);
+        //     }
+        //     printf("\n");
+        // }
 
     for (int i = 0; i < 3; i ++)
             free(intervals[i]);
@@ -121,10 +144,6 @@ static void print_result_statistics(Order order) {
 
 // main loop for the chef behaviour
 static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t* table, int mantime) {
-    // print beggining log
-    print_log(log_code_start, logfile, ":chef: begins distributing ingredients to the salad makers", NULL);
-    print_log(log_code_start, common_log, ":chef: begins distributing ingredients to the salad makers", log_mutex);
-
     int prev_ingr_id = -1;
     while (!check_done(order)){
         // while there are salads to be cooked
@@ -140,10 +159,6 @@ static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t
         // relax for mantime seconds (process turn to idle)
         take_a_break(mantime);
     }
-
-    // print ending log and results
-    print_log(log_code_end, logfile, ":chef: stopped ingredients distribution", NULL);
-    print_log(log_code_end, common_log, ":chef: stopped ingredients distribution", log_mutex);
 }
 
 // function to dettach and destroy relative shared memory segments (shmids and semaphores)
@@ -262,15 +277,14 @@ int main(int argc, char* argv[]) {
     // wait for every body to finish
     while (!check_workers_done(&order));
 
-    // print final results
-    print_result_statistics(order);
-
     // close the store (dettach everything and release them properly)
     sem_t *sems[] = {tomato, onion, pepper, mutex, log_mutex, table};
     char * names[] = {TOMATO, ONION, PEPPER, MUTEX, LOG_MUTEX, WORKING_TABLE};
     close_store(names, sems, 6, shm_table, 1);
     printf("Done clearing\n");
-
+    // print final results
+    print_result_statistics(order);
+    
     fclose(logfile);
     fclose(common_log);
     free(parsed);
