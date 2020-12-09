@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     strcat(filename, argv[argc-1]);
     logfile = fopen(filename, "w");         // personal log file
     common_log = fopen(LOG_PATH, "a");      // common logfile
-    
+
     // acquire the order (shared mem segment)
     Order order;
     acquire_order(atoi(argv[6]), &order);

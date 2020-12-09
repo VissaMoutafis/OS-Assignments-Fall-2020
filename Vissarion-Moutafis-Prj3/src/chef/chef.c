@@ -100,14 +100,16 @@ static void print_result_statistics(Order order) {
     memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
     int interval_counters[3] = {0, 0, 0};
     char *usr[3] = {"Saladmaker1", "Saladmaker2", "Saladmaker3"};
-    MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);
+    int pids[] = {-1, -1, -1};
+    MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters, pids);
     MyTimeInterval * concurrent_work_intervals = find_concurrent_intervals(intervals, 3, interval_counters, &concurrent_size);
-    printf("Total #Salads %d/%d\nSalads per salad maker {%d, %d, %d}\nConcurrent work time intervals: ",
+    printf("Total #Salads %d/%d\nSalads per salad maker:\n\t%s (pid: %d) %d salads, \
+    \n\t%s (pid: %d) %d salads, \n\t%s (pid: %d) %d salads.\nConcurrent work time intervals: ",
             init_salads - order.shmem->num_of_salads, 
             init_salads,
-            salads_per_saladmaker[0], 
-            salads_per_saladmaker[1],
-            salads_per_saladmaker[2]);
+            usr[0], pids[0], salads_per_saladmaker[0], 
+            usr[1], pids[1],salads_per_saladmaker[1],
+            usr[2], pids[2],salads_per_saladmaker[2]);
     strcat(msg, temp_msg);
 
     for (int i = 0; i < concurrent_size; i ++) {

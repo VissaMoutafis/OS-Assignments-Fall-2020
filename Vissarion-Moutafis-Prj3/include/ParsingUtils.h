@@ -78,7 +78,8 @@ void print_log(LogCode code, FILE *file, char* process_name, char *msg, sem_t *l
 MyTimeInterval **get_time_intervals_from_log(char *log_name, LogCode start_code,
                                              LogCode end_code, char *usr_list[],
                                              int usr_list_size,
-                                             int interval_counters[]);
+                                             int interval_counters[], 
+                                             int pid_table[]);
 
 
 // extra features:

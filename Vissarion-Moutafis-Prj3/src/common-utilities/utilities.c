@@ -123,18 +123,19 @@ MyTimeInterval *merge_intervals(MyTimeInterval *intervals, int intervals_size, i
 
     // at this point the stack has all of the merged overlapping intervals
     // so we must add them to an array and return it
+    int stack_size = stack_len(interval_stack);
     MyTimeInterval *concurrent = calloc(stack_len(interval_stack), sizeof(*concurrent));
-    int i = 0;
+    int i = stack_size-1;
     while (!stack_empty(interval_stack)) {
         // pop the first element
         MyTimeInterval* interval = (MyTimeInterval*)stack_pop(interval_stack);
         assert(interval); // debbuging
-
+        assert(i >= 0);
         // insert the interval to the list
         MyTime_copy(&concurrent[i].start, interval->start);
         MyTime_copy(&concurrent[i].end, interval->end);
         // and increase the counter
-        i ++;
+        i --;
         // destroy the interval since its no longer needed
         destroy_interval(interval);
     }
@@ -142,7 +143,7 @@ MyTimeInterval *merge_intervals(MyTimeInterval *intervals, int intervals_size, i
     pq_destroy(intervals_pq);
     stack_destroy(&interval_stack);
 
-    *new_size = i;
+    *new_size = stack_size;
     return concurrent;
 }
 

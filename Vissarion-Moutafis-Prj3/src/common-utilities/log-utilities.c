@@ -97,11 +97,33 @@ static void get_usr(char* log_line, char *usr_buf, int usr_buf_size) {
     }
 }
 
+static int get_proc_pid(char *log_line) {
+    // General logline format [code] [timestamp] [pid] [proc name] [msg]
+    int i = 0;
+    int brackets = 0;
+    while (brackets < 5) {
+        if (is_bracket(log_line[i])) brackets++;
+        i++;
+    }
+
+    assert(is_bracket(log_line[i-1]));
+
+    char pid[100];
+    memset(pid, 0, 100);
+    int pid_i = 0;
+    while (!is_bracket(log_line[i])) {
+        pid[pid_i] = log_line[i];
+        pid_i++;
+        i++;
+    }
+
+    return atoi(pid);
+}
 
 // Create a board of MyTimeInterval structs for each one of the specified users in the user board.
 // We consider the log file with name log_name
 // Acquire start/end timestamps by the lines that has start_code/end_code as LogCode  
-MyTimeInterval** get_time_intervals_from_log(char *log_name, LogCode start_code, LogCode end_code, char *usr_list[], int usr_list_size, int interval_counters[]) {
+MyTimeInterval** get_time_intervals_from_log(char *log_name, LogCode start_code, LogCode end_code, char *usr_list[], int usr_list_size, int interval_counters[], int pid_table[]) {
     // get the #lines of the logfile
     size_t lines = fget_lines(log_name);
     // open the file for reading
@@ -144,6 +166,10 @@ MyTimeInterval** get_time_intervals_from_log(char *log_name, LogCode start_code,
             
             //check if the user is in the given user list
             if (usr_id < usr_list_size) {
+                if (pid_table[usr_id] < 0) {
+                    int pid = get_proc_pid(line_buf);
+                    pid_table[usr_id] = pid;
+                }
                 if (starting_interval[usr_id]) {
                     starting_interval[usr_id] = false;                                  // the next timestamp is an ending one 
 
