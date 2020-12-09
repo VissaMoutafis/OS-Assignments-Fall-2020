@@ -79,7 +79,7 @@ static bool interval_overlap(MyTimeInterval *i1, MyTimeInterval *i2) {
 
     // they overlap only if the min's ending timestamp
     // is greater or equal to the max's starting timestamp
-    return MyTime_compare(&min->end, &max->start) > 0;  
+    return MyTime_compare(&min->end, &max->start) >= 0;  
 }
 
 MyTimeInterval *merge_intervals(MyTimeInterval *intervals, int intervals_size, int *new_size) {
