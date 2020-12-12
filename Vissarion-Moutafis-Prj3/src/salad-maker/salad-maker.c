@@ -128,12 +128,6 @@ int main(int argc, char *argv[]) {
     if (t2 < 0) t2 = 0;
     if (t1 == t2) t2++;
 
-    // open the log files
-    char filename[100] = "./logs/saladmaker-";
-    strcat(filename, argv[argc-1]);
-    logfile = fopen(filename, "w");         // personal log file
-    common_log = fopen(LOG_PATH, "a");      // common logfile
-
     // acquire the order (shared mem segment)
     Order order;
     acquire_order(atoi(argv[6]), &order);
@@ -146,6 +140,18 @@ int main(int argc, char *argv[]) {
         salad_maker_name = "Saladmaker2";
     else
         salad_maker_name = "Saladmaker3";
+
+        // open the log files
+    char filename[100] = "./logs/";
+    strcat(filename, salad_maker_name);
+    logfile = fopen(filename, "w");         // personal log file
+    common_log = fopen(LOG_PATH, "a");      // common logfile
+    
+    // start by printing the process id to the personal proc logfile
+    char b[100];
+    sprintf(b, "%d", getpid());
+    print_log(log_code_print_pid, logfile, salad_maker_name, b, NULL);
+
     Ingredients ingr = set_ingredient_semaphores(ingredient_name);
     if (ingr == NULL)
         perror("retrieving sems at workers");

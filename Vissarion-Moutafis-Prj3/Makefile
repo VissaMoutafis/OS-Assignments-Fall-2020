@@ -12,7 +12,7 @@ SALAD-MAKER-DIR := $(SRC)/salad-maker
 
 CC := gcc
 
-CFLAGS := -g3 -Wall -I $(INCLUDE)
+CFLAGS := -g3 -Wall -Werror -I $(INCLUDE)
 
 LIBS := -lpthread
 

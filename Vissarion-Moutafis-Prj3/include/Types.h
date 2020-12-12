@@ -52,7 +52,8 @@ typedef enum {
     log_code_cook_end,
     log_code_notify,
     log_code_wait_ingr,
-    log_code_receive_ingr
+    log_code_receive_ingr,
+    log_code_print_pid
 } LogCode;
 
 typedef struct {
