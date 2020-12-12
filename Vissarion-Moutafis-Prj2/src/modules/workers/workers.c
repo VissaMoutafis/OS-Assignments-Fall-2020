@@ -57,7 +57,6 @@ int main(int argc, char* argv[]) {
         }
     }
     
-
     // wait for the child to end
     if ((child_pid = wait(NULL)) == -1) {
         char msg[20];

@@ -85,6 +85,7 @@ void create_internals(int num_of_children, Range* ranges) {
 
     parent_behaviour(fd_board, num_of_children);
 }
+
 void check_args(int argc, char* argv[]) {
     if (argc != 7) {
         fprintf(stderr, "Wrong input! ./root -l min -u max -w num-of-children.\n");
@@ -96,6 +97,7 @@ void check_args(int argc, char* argv[]) {
         exit(1);
     }
 }
+
 int main(int argc, char* argv[]) {
     check_args(argc, argv);
     set_signal_handler(SIGUSR1, root_handler);
