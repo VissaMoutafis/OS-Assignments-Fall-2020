@@ -92,9 +92,6 @@ static bool check_workers_done(Order *order) {
 
 // function to print the final statistics for the salad makers 
 static void print_result_statistics(Order order) {
-    char msg[BUFSIZ], temp_msg[BUFSIZ];
-    memset(msg, 0, BUFSIZ);
-    memset(temp_msg, 0, BUFSIZ);
     int salads_per_saladmaker[3];
     int concurrent_size = 0;
     memcpy(salads_per_saladmaker, order.shmem->salads_per_saladmaker, sizeof(salads_per_saladmaker));
@@ -105,8 +102,13 @@ static void print_result_statistics(Order order) {
     int pids[] = {-1, -1, -1};
     char *logfiles[3] = {"./logs/Saladmaker1", "./logs/Saladmaker2", "./logs/Saladmaker3"};
     get_workers_pid(logfiles, pids, 3);
+    
+    // get all the time intervals of work for each salad maker
     MyTimeInterval ** intervals = get_time_intervals_from_log(LOG_PATH, log_code_cook_start, log_code_cook_end, usr, 3, interval_counters);
+    // get the concurrent and merged version of the intervals
     MyTimeInterval * concurrent_work_intervals = find_concurrent_intervals(intervals, 3, interval_counters, &concurrent_size);
+    
+    // print the statistics
     printf("Total #Salads %d/%d\nSalads per salad maker:\n\t%s (pid: %d) %d salads, \
     \n\t%s (pid: %d) %d salads, \n\t%s (pid: %d) %d salads.\nConcurrent work time intervals: ",
             init_salads - order.shmem->num_of_salads, 
@@ -114,8 +116,7 @@ static void print_result_statistics(Order order) {
             usr[0], pids[0], salads_per_saladmaker[0], 
             usr[1], pids[1],salads_per_saladmaker[1],
             usr[2], pids[2],salads_per_saladmaker[2]);
-    strcat(msg, temp_msg);
-
+    // printing the concurrent work time intervals
     for (int i = 0; i < concurrent_size; i ++) {
         char start_buf[12], end_buf[12];
         memset(start_buf, 0, 12);
@@ -123,26 +124,12 @@ static void print_result_statistics(Order order) {
         MyTime_time_to_str(&concurrent_work_intervals[i].start, start_buf, 12);
         MyTime_time_to_str(&concurrent_work_intervals[i].end, end_buf, 12);
         printf("\n[%s - %s] ", start_buf, end_buf);
-        strcat(msg, temp_msg);
     }
     puts("\n");
 
-        // for (int i = 0; i < 3; i ++) {
-        //     printf("Time intervals for %s:\n", usr[i]);
-        //     for (int j = 0; j < interval_counters[i]; j++) {
-        //         printf("[%d:%d:%d:%d - %d:%d:%d:%d] ",
-        //         intervals[i][j].start.hour,
-        //                intervals[i][j].start.min, intervals[i][j].start.sec,
-        //                intervals[i][j].start.millisec,
-        //                intervals[i][j].end.hour, intervals[i][j].end.min,
-        //                intervals[i][j].end.sec,
-        //                intervals[i][j].end.millisec);
-        //     }
-        //     printf("\n");
-        // }
-
+    // Memory deallocation
     for (int i = 0; i < 3; i ++)
-            free(intervals[i]);
+        free(intervals[i]);
 
     free(intervals);
     free(concurrent_work_intervals);
@@ -155,9 +142,9 @@ static void chef_behaviour(Order order, Ingredients ingr[], int ingr_size, sem_t
         // while there are salads to be cooked
 
         // try to use the table (check if the table is empty)
-        printf("Checking if table is free.\n");
+        // printf("Checking if table is free.\n"); // REMEMBER TO REMOVE
         sem_P(table);
-        printf("Table is free\n"); //REMEBER TO REMOVE
+        // printf("Table is free\n"); //REMEBER TO REMOVE
 
         // try to provide an ingredient and get the ingredient id for the next iteration
         prev_ingr_id = provide_ingredients(ingr, ingr_size, prev_ingr_id);
@@ -187,7 +174,7 @@ static int create_order(Order *order, int number_of_salads) {
         return ORDER_FAILURE_CRT;
     }
     // some logging for later use
-    printf("Shared Memmory ID: %d\n", order->shm_id);
+    // printf("Shared Memmory ID: %d\n", order->shm_id);
     
     // if everything ok, then attach the process to the shared memory part
     order->shmem = (SharedMem*)shm_attach(order->shm_id);
@@ -279,7 +266,7 @@ int main(int argc, char* argv[]) {
     ShmPair shm_table[] = {order};
 
 
-    printf("Trying to clear (waiting for workers to finish)\n");
+    printf("Trying to clear shared memory segments...\n");
     // wait for every body to finish
     while (!check_workers_done(&order));
 
@@ -287,7 +274,7 @@ int main(int argc, char* argv[]) {
     sem_t *sems[] = {tomato, onion, pepper, mutex, log_mutex, table};
     char * names[] = {TOMATO, ONION, PEPPER, MUTEX, LOG_MUTEX, WORKING_TABLE};
     close_store(names, sems, 6, shm_table, 1);
-    printf("Done clearing\n");
+    printf("Done clearing.\n \n \nStatistics:\n");
     // print final results
     print_result_statistics(order);
     

@@ -39,7 +39,7 @@ static void require_ingredient(Order order, Ingredients ingredient) {
 
     while (!check_done(order) && sem_P_nonblock(ingredient) < 0);
     if (!check_done(order)) {
-        sem_print(salad_maker_name, ingredient);
+        // sem_print(salad_maker_name, ingredient);
 
         sprintf(log_buf, "Get Ingredients");
         print_log(log_code_receive_ingr, logfile, salad_maker_name, log_buf, NULL);
