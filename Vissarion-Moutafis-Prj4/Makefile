@@ -1,4 +1,4 @@
-PROGRAM = main
+PROGRAM = quic
 
 CC = gcc
 
@@ -20,8 +20,6 @@ TESTCASE = ./testcases
 
 testcase-num := 1K
 
-ARGS = -i $(TESTCASE)/records$($<).txt
-
 src_element = ./test_dir
 dest = ./target_media/phony
 ARGS = $(src_element) $(dest)
@@ -38,7 +36,7 @@ clean:
 	rm -rf $(BUILD)/$(PROGRAM) $(OBJS)
 
 clean-dest: 
-	rm -rf $(dest)/*
+	rm -rf ./target_media/*
 
 run-noargs : $(BUILD)/$(PROGRAM)
 	$(BUILD)/$(PROGRAM)

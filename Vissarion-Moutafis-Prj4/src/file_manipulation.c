@@ -1,113 +1,60 @@
 #include "FileManipulation.h"
+#include "Utilities.h"
+// flag that determines if we should handle links or not (1 or 0 respectively)
+int manage_links = 0;
 
-int copy_symlinks = 0;
+// flag that determines whether to check for deleted files in the src dir that don't exist in out dir.
+int check_for_deleted = 0;
 
-// return the mode, in failure return something < 0
-static mode_t path_get_mode(char *path) {
-    struct stat buf;
-    memset(&buf, 0, sizeof(buf));
-    if (lstat(path, &buf) < 0) {
-        perror("lstat"); 
-        return -1;
-    }
-    return buf.st_mode;
-}
+// flag that defines the verbosity level of the output
+int verbose = 0;
 
-//return 1 if the path is a directory, else 0
-static int is_dir(char *path) {
-    struct stat buf;
-    memset(&buf, 0, sizeof(buf));
-    if (lstat(path, &buf) < 0) {
-        perror("lstat");
-        return 0;
-    }
-    return (buf.st_mode & S_IFMT) == S_IFDIR;
-}
 
-// return 1 if files differ, 0 if they don't 
-static int files_diff(char *in_path, char *out_path) {
-    struct stat out_buf, in_buf;
-    memset(&in_buf, 0, sizeof(in_buf));
-    if (lstat(in_path, &in_buf) < 0) {
-        return 1;
-    }
-    memset(&out_buf, 0, sizeof(out_buf));
-    if (lstat(out_path, &out_buf) < 0) {
-        return 1;
-    }
-
-    return (in_buf.st_mode & S_IFMT) == (out_buf.st_mode & S_IFMT) &&   // check if the files are of the same type
-            in_buf.st_size == out_buf.st_size                      &&   // check if the files are of the same size    
-            in_buf.st_mtime <= out_buf.st_mtime ? 0 : 1;                         // check if the src is modified later than it's relative copy
-}
-
-// return 1 if the path is symbolic link, else 0
-static int is_sym(char *path) {
-    struct stat buf;
-    memset(&buf, 0, sizeof(buf));
-    if (lstat(path, &buf) < 0) {
-        perror("lstat");
-        return 0;
-    }
-    return (buf.st_mode & S_IFMT) == S_IFLNK;
-}
-
-// small procedure that takes as input the open fd's 
-// of one input and one output file and copies the containings of 
-// the first to the second. Returns 1 in success, otherwise 0
-static int copy_file(int in_fd, int out_fd, int BUFFSIZE) {
-    ssize_t bytes = 0;
-    char buf[BUFFSIZE];
-    memset(buf, 0, BUFFSIZE);
-    // start copying the file
-    while ((bytes = read(in_fd, buf, BUFFSIZE)) > 0) {
-        if (write(out_fd, buf, bytes) < bytes) {
-            // error in writing
-            close(in_fd);
-            close(out_fd);
-            return FILE_CP_FAIL;
-        }
-    }
-
-    close(in_fd);
-    close(out_fd);
-    if (bytes < 0)
-        return FILE_CP_FAIL;
-    else
-        return FILE_CP_SUCC;
-}
-
-int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE) {
+// function that copies a file ( with name in_path) to the file with name out_path. 
+// If the latter doesn't exist create it.
+int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
     int in, out;
-    
+    // first we must check if the in_path is a hard link and if it is then we must 
+    // decide if it is the first one. To that case we copy it. If it is already copied then just 
+    // use link to make a hard link in the new media
+    if (manage_links) {
+        if (is_sym(in_path)) {
+            // case of symlink, just copy the link with the path in
+            printf("This is a symbolic link. Exiting...");
+            exit(0);
+        }
+        //  else if (is_hardlink(in_path)){
+
+        // } 
+    }
+
+    // open input file
     if ((in = open(in_path, O_RDONLY)) == -1) {
         // the reading of the input file failed print error message
         fprintf(stderr, "%s: Cannot open input file.\n", in_path);
         return FILE_CP_FAIL;
     }
+
+    // open out put for writting, if it exists then truncate and rewrite
     if ((out = open(out_path, O_WRONLY | O_CREAT | O_TRUNC)) == -1) {
         fprintf(stderr, "%s: Cannot open output file.\n", in_path);
         return FILE_CP_FAIL;
     }
-    // copy the mode to the out
+
+    // copy the mode of in at the out's inode
     if (chmod(out_path, path_get_mode(in_path)) < 0) {
         perror("chmod");
         return FILE_CP_FAIL;
     }
 
-    // copy the file
+    // copy the contents of input file to out put and return 
     return copy_file(in, out, BUFFSIZE);
 }
 
-// create a dir
-static DIR* create_dir(char *path) {
-    if (mkdir(path, 0755) < 0) {
-        fprintf(stderr, "Cannot create dir '%s'.\n", path);
-    }
-    return opendir(path);
-}
 
-int copy_dir(char *in_path, char *out_path, int BUFFSIZE) {
+
+// function that copies a whole directory recursively (deep copy the whole dir to out path)
+int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
     DIR *in_dp, *out_dp;
     struct dirent *dirent_in;
 
@@ -151,7 +98,7 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE) {
         strcat(new_out_path, dirent_in->d_name);
         printf("Trying to create '%s' from '%s'.\n", new_out_path, element_path);
         // // copy every element of the directory
-        if (copy_element(element_path, new_out_path) == FAIL)
+        if (copy_element(element_path, new_out_path, out_root_path) == FAIL)
             return DIR_CP_FAIL;
 
         // free the allocated memory
@@ -162,11 +109,10 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE) {
     return DIR_CP_SUCC;
 }
 
-
-// The in path is the src file/dir/sym path. 
-// The out_path is the new path that the last notion
-//  is the name that you give to the deep copy you make.  
-int copy_element(char *in_path, char *out_path) {
+// The in path is the src file/dir/symlink's path. 
+// The out_path is the new pathname that you give to the deep copy you make.
+// The out root path, is the actual root directory that you want to copy things to
+int copy_element(char *in_path, char *out_path, char *out_root_path) {
     // logic:
     // if the in_path its a file:
     //      - check if it already exist in target
@@ -177,30 +123,92 @@ int copy_element(char *in_path, char *out_path) {
     // if the path is a symlink then just make a pure copy (only if the proper flag is set)
 
     if (is_dir(in_path)) {
-        return copy_dir(in_path, out_path, CP_BUFFSIZE);
+        return copy_dir(in_path, out_path, CP_BUFFSIZE, out_root_path);
     } else {
-        // if it is a symlink and we haven't set the flag then just skip it
-        if (is_sym(in_path) && !copy_symLinks)
-            return FILE_CP_SUCC;
-
         // in case the src and dest files are not different then there is no
         // reason to copy again
         if (files_diff(in_path, out_path) == 0)
             return FILE_CP_SUCC;
 
 
-        return clean_copy_file(in_path, out_path, CP_BUFFSIZE);
+        return clean_copy_file(in_path, out_path, CP_BUFFSIZE, out_path);
     }
 
     return FAIL;
 }
 
+void print_usage(void) {
+    fprintf(stderr, "\nUsage:\n\t ~$ quic [-v] [-l] [-d] origin_dir target_dir\n"
+    "Flags must be given all together, either in the beginning or the end of\n"
+    "the command and\ndo not interfere between origin and target paths.\n");
+}
+
+char **set_args(int argc, char *argv[],  int min_args) {
+    if (argc-1 < min_args) {
+        fprintf(stderr, "You have to provide at least the origin and dest directory");
+        print_usage();
+        exit(1);
+    }
+
+    char **args = calloc(2, sizeof(char *));
+
+    // we already know that the origin and target path must be given in a consecutive way
+    // i.e. origin -l target is not permitted
+    // the flags will be given consecutively as well
+
+    // flag that notes how many path arguments we have yet encountered
+    short int path_files = 0; 
+    for (int i = 1; i < argc; i++) {
+        // if this is one of the flag arguments
+        if (strstr(argv[i], "-") != NULL) {
+            // error checking
+            if (path_files % 2) {
+                free(args);
+                fprintf(stderr, "\nError: Flags should not be between compulsory args.\n");
+                print_usage();
+                exit(1);
+            }
+
+            // now we have to check if it is one of the available flags
+            if (!strcmp(argv[i], "-l"))
+                manage_links = 1;
+            else if (!strcmp(argv[i], "-v"))
+                verbose = 1;
+            else if (!strcmp(argv[i], "-d"))
+                check_for_deleted = 1;
+            else {
+                free(args);
+                fprintf(stderr, "\nError: Uknown flag.\n");
+                print_usage();
+                exit(1);
+            }
+        } else {
+            path_files++;
+            args[path_files-1] = argv[i];
+        }
+    }
+
+    if (path_files < 2) {
+        free(args);
+        fprintf(stderr, "\nError: Argument(s) missing.\n");
+        print_usage();
+        exit(1);
+    }
+
+    return args;
+}
 
 int main(int argc, char *argv[]) {
-    char *in = argv[1];
-    char *target_media = argv[2];
+    // return the origin and target directory. Also set the proper flags during searching the args.
+    char** args = set_args(argc, argv, 2);
+    char *in = args[0];
+    char *target = args[1];
+    printf("in: %s\ntarget: %s\n verbose: %d\ncheck deleted: %d\nmanage links: %d\n", in, target, verbose, check_for_deleted, manage_links);
 
-    copy_element(in, target_media);
+    // check_for_deleted_files(in, target);
+    // copy_element(in, target, target);
 
+
+    free(args);
     return 0;
 }
