@@ -28,12 +28,13 @@ include $(SRC)/src.inc
 
 $(BUILD)/$(PROGRAM) : $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(BUILD)/$(PROGRAM) $(LIBRARIES)
+	cp $(BUILD)/$(PROGRAM) ./$(PROGRAM)
 
 $(BIN)/%.o : $(SRC)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD)/$(PROGRAM) $(OBJS)
+	rm -rf $(BUILD)/$(PROGRAM) $(OBJS) ./$(PROGRAM)
 
 clean-dest: 
 	rm -rf ./target_media/*
@@ -42,4 +43,4 @@ run-noargs : $(BUILD)/$(PROGRAM)
 	$(BUILD)/$(PROGRAM)
 
 run : $(BUILD)/$(PROGRAM)
-	$(BUILD)/$(PROGRAM) $(ARGS)
+	$(BUILD)/$(PROGRAM) $(ARGS) 

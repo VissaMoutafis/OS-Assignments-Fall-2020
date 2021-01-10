@@ -89,10 +89,97 @@ DIR *create_dir(char *path) {
 }
 
 void delete_element(char *path) {
+    printf("Trying to delete '%s'\n", path);
     if(unlink(path) != 0) {
         char b[BUFSIZ];
         sprintf(b, "Unlinking '%s'", path);
         perror(b);
         exit(1);
     }
+}
+
+void delete_dir(char *path) {
+    DIR *dp;
+    struct dirent *dir;
+
+    // first open the src directory
+    if ((dp = opendir(path)) == NULL) {
+        fprintf(stderr, "Trouble opening directory '%s'.\n", path);
+        exit(1);
+    }
+
+    // Now we are ready to check the containings of the  target directory
+    while ((dir = readdir(dp)) != NULL) {
+        if (strcmp(".", dir->d_name) == 0 ||
+            strcmp("..", dir->d_name) == 0)
+            continue;
+
+        // reconstruct the suppossed path as it would be in the original
+        // directory
+        char *element_path = calloc(strlen(path) + 1 + strlen(dir->d_name) + 1, sizeof(char));
+        strcpy(element_path, path);
+        strcat(element_path, "/");
+        strcat(element_path, dir->d_name);
+
+        if (is_dir(element_path))
+            delete_dir(element_path);
+        else
+            delete_element(element_path);
+
+        // free the allocated memory
+        free(element_path);
+        element_path = NULL;
+    }
+    printf("Trying to delete '%s'\n", path);
+    rmdir(path);
+}
+
+
+int check_deleted(char *src_dir, char *trg_dir) {
+    DIR *trg_dp;
+    struct dirent *dirent_trg;
+
+    // first open the src directory 
+    if ((trg_dp = opendir(trg_dir)) == NULL) {
+        fprintf(stderr, "Trouble opening directory '%s'.\n", src_dir);
+        return FAIL;
+    }
+
+    // Now we are ready to check the containings of the  target directory
+    while ((dirent_trg = readdir(trg_dp)) != NULL) {
+        if (strcmp(".", dirent_trg->d_name) == 0 || strcmp("..", dirent_trg->d_name) == 0)
+            continue;
+
+        // reconstruct the suppossed path as it would be in the original directory
+        char *src_path = calloc(strlen(src_dir) + 1 + strlen(dirent_trg->d_name) + 1, sizeof(char));
+        strcpy(src_path, src_dir);
+        strcat(src_path, "/");
+        strcat(src_path, dirent_trg->d_name);
+        // construct the path on the trg dir
+        char *out_path = calloc(strlen(trg_dir) + 1 + strlen(dirent_trg->d_name) + 1, sizeof(char));
+        strcpy(out_path, trg_dir);
+        strcat(out_path, "/");
+        strcat(out_path, dirent_trg->d_name);
+
+        // Now check if the element exists in the src directory
+        struct stat buf;
+        memset(&buf, 0, sizeof(buf));
+        int exists_in_src = !(lstat(src_path, &buf) < 0 || buf.st_ino == 0);
+        int exists_in_trg = !(lstat(out_path, &buf) < 0 || buf.st_ino == 0);
+
+        if (exists_in_trg && !exists_in_src) {
+            if (is_dir(out_path)) 
+                delete_dir(out_path);
+            else 
+                delete_element(out_path);
+        }
+
+        // free the allocated memory
+        free(src_path);
+        src_path = NULL;
+        free(out_path);
+        out_path = NULL;
+    }
+    
+    return SUCC;
 }

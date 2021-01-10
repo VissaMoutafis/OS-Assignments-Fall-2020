@@ -17,17 +17,11 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     // first we must check if the in_path is a hard link and if it is then we must 
     // decide if it is the first one. To that case we copy it. If it is already copied then just 
     // use link to make a hard link in the new media
-    if (manage_links) {
-        if (is_sym(in_path)) {
-            // case of symlink, just copy the link with the path in
-            printf("This is a symbolic link. Exiting...");
-            exit(0);
-        }
-        //  else if (is_hardlink(in_path)){
-
-        // } 
-    }
-
+    
+    // if it is a symlink and we don't want to consider the links then just skip it
+    if (is_sym(in_path) && !(manage_links)) 
+        return FILE_CP_SUCC;
+    
     // open input file
     if ((in = open(in_path, O_RDONLY)) == -1) {
         // the reading of the input file failed print error message
@@ -50,7 +44,6 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     // copy the contents of input file to out put and return 
     return copy_file(in, out, BUFFSIZE);
 }
-
 
 
 // function that copies a whole directory recursively (deep copy the whole dir to out path)
@@ -104,8 +97,13 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         // free the allocated memory
         free(element_path);
         element_path = NULL;
+        free(new_out_path);
+        new_out_path = NULL;
     }
     
+    if (check_for_deleted && check_deleted(in_path, out_path) == FAIL)
+        return DIR_CP_FAIL;
+
     return DIR_CP_SUCC;
 }
 
@@ -203,10 +201,8 @@ int main(int argc, char *argv[]) {
     char** args = set_args(argc, argv, 2);
     char *in = args[0];
     char *target = args[1];
-    printf("in: %s\ntarget: %s\n verbose: %d\ncheck deleted: %d\nmanage links: %d\n", in, target, verbose, check_for_deleted, manage_links);
 
-    // check_for_deleted_files(in, target);
-    // copy_element(in, target, target);
+    copy_element(in, target, target);
 
 
     free(args);

@@ -36,3 +36,6 @@ int get_hardlinks(char *path);
 // of one input and one output file and copies the containings of
 // the first to the second. Returns 1 in success, otherwise 0
 int copy_file(int in_fd, int out_fd, int BUFFSIZE);
+
+// check for the files in target that are deleted from source and delete them from target
+int check_deleted(char *src_path, char *trg_path);
