@@ -33,3 +33,7 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
 
 // function that can copy all kinds of notions in the in path (dirs are copied recursively)
 int copy_element(char *in_path, char *out_path, char *out_root_path);
+
+
+
+// variables used for statistics printing 

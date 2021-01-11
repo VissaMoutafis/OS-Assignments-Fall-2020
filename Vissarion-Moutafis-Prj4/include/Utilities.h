@@ -39,3 +39,7 @@ int copy_file(int in_fd, int out_fd, int BUFFSIZE);
 
 // check for the files in target that are deleted from source and delete them from target
 int check_deleted(char *src_path, char *trg_path);
+
+// check if the target path is inside the src path and we have an infinite loop
+// return SUCC if it detects a cycle, otherwise return FAIL 
+int detect_cycle(char *src_path, char *trg_path);

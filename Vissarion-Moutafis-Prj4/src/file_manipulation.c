@@ -1,14 +1,28 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/times.h>
+#include <unistd.h>
+
 #include "FileManipulation.h"
 #include "Utilities.h"
+
 // flag that determines if we should handle links or not (1 or 0 respectively)
 int manage_links = 0;
-
 // flag that determines whether to check for deleted files in the src dir that don't exist in out dir.
 int check_for_deleted = 0;
-
 // flag that defines the verbosity level of the output
 int verbose = 0;
 
+// total bytes copied
+u_int64_t bytes_copied = 0;
+// total number of new elements copied
+u_int32_t items_copied = 0;
+// total number of elements checked for copying
+u_int32_t items_detected = 0;
+//total time the whole copy process lasted
+double total_time = 0.0;
+
+short dir_changed = 0;
 
 // function that copies a file ( with name in_path) to the file with name out_path. 
 // If the latter doesn't exist create it.
@@ -22,6 +36,18 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     if (is_sym(in_path) && !(manage_links)) 
         return FILE_CP_SUCC;
     
+    // add the size of the file to the copied file
+    struct stat buf;
+    memset(&buf, 0, sizeof(buf));
+    if (lstat(in_path, &buf) < 0) {
+        fprintf(stderr, "%s: Cannot open input file to acquire size.\n", in_path);
+        return FILE_CP_FAIL;
+    }
+    bytes_copied += (u_int64_t)buf.st_size;
+    // and increase the copied files counter
+    items_copied += 1;
+
+
     // open input file
     if ((in = open(in_path, O_RDONLY)) == -1) {
         // the reading of the input file failed print error message
@@ -72,6 +98,8 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         perror("chmod");
         return DIR_CP_FAIL;
     }
+    // set the flag
+    dir_changed = 0;
 
     // Now we are ready to copy the containings of the directory
     while ((dirent_in = readdir(in_dp)) != NULL) {
@@ -100,7 +128,11 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         free(new_out_path);
         new_out_path = NULL;
     }
-    
+
+    if (dir_changed)
+        // increase the copied items counter
+        items_copied += 1;
+
     if (check_for_deleted && check_deleted(in_path, out_path) == FAIL)
         return DIR_CP_FAIL;
 
@@ -119,6 +151,10 @@ int copy_element(char *in_path, char *out_path, char *out_root_path) {
     // if the path is a dir then:
     //      - if it does not exist then try to copy its containings
     // if the path is a symlink then just make a pure copy (only if the proper flag is set)
+    
+    //every time we copy an element we increase the detected elements counts
+    items_detected += 1;
+
 
     if (is_dir(in_path)) {
         return copy_dir(in_path, out_path, CP_BUFFSIZE, out_root_path);
@@ -128,7 +164,7 @@ int copy_element(char *in_path, char *out_path, char *out_root_path) {
         if (files_diff(in_path, out_path) == 0)
             return FILE_CP_SUCC;
 
-
+        dir_changed = 1;
         return clean_copy_file(in_path, out_path, CP_BUFFSIZE, out_path);
     }
 
@@ -196,15 +232,57 @@ char **set_args(int argc, char *argv[],  int min_args) {
     return args;
 }
 
+void print_statistics(void) {
+    char *sep = "=========================================";
+    printf("\n\n%s\n\tStatistics:\n\n"
+    "   Total Time Elapsed: %.4f\n"
+    "   Total Elements Copied: %u/%u (copied/detected)\n"
+    "   Total Bytes Copied: %lu\n"
+    "   Write Rate: %.4f\n%s\n", 
+    sep, 
+    total_time, 
+    items_copied, items_detected, 
+    bytes_copied, 
+    bytes_copied ? ((double)bytes_copied)/total_time : 0,
+    sep);
+}
+
+char *src;
+char *target;
+
 int main(int argc, char *argv[]) {
     // return the origin and target directory. Also set the proper flags during searching the args.
     char** args = set_args(argc, argv, 2);
-    char *in = args[0];
-    char *target = args[1];
+    src = realpath(args[0], NULL);
+    target = realpath(args[1], NULL);
 
-    copy_element(in, target, target);
+    double t1, t2;
+    struct tms tb1, tb2;
+    double ticspersec;
 
+    ticspersec = (double)sysconf(_SC_CLK_TCK);
+    t1 = (double)times(&tb1);
+
+    // check for cyclic path
+    if (detect_cycle(src, target) == FAIL) {
+        // int ret = copy_element(src, target, target);
+        // if (ret == FAIL) {
+        //     fprintf(stderr, "Failed to execute copy command.\n");
+        // }
+    } else {
+        free(src);
+        free(target);
+        fprintf(stderr, "Error: Cannot copy path '..' in '.'\n");
+        exit(1);
+    }
+
+    t2 = times(&tb2);
+    total_time = 1000.0*(float)(t2-t1)/(float)ticspersec;
+    // print statistics
+    print_statistics();
 
     free(args);
+    free(src);
+    free(target);
     return 0;
 }

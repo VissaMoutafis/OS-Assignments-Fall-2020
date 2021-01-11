@@ -34,6 +34,9 @@ int files_diff(char *in_path, char *out_path) {
         return 1;
     }
 
+    if ((in_buf.st_mode & S_IFMT) == S_IFLNK)
+        return 0;
+
     return (in_buf.st_mode & S_IFMT) == (out_buf.st_mode & S_IFMT) &&  // check if the files are of the same type
                    in_buf.st_size == out_buf.st_size &&  // check if the files are of the same size
                    in_buf.st_mtime <= out_buf.st_mtime 
@@ -182,4 +185,43 @@ int check_deleted(char *src_dir, char *trg_dir) {
     }
     
     return SUCC;
+}
+
+
+int detect_cycle(char *src_dir, char* trg_path) {
+    DIR *src_dp;
+    struct dirent *dirent_src;
+
+    // first open the src directory 
+    if ((src_dp = opendir(src_dir)) == NULL) {
+        fprintf(stderr, "Trouble opening directory '%s'.\n", src_dir);
+        return FAIL;
+    }
+
+    // Now we are ready to check the containings of the  target directory
+    while ((dirent_src = readdir(src_dp)) != NULL) {
+        if (strcmp(".", dirent_src->d_name) == 0 || strcmp("..", dirent_src->d_name) == 0)
+            continue;
+
+        // reconstruct the suppossed path as it would be in the original directory
+        char *src_path = calloc(strlen(src_dir) + 1 + strlen(dirent_src->d_name) + 1, sizeof(char));
+        strcpy(src_path, src_dir);
+        strcat(src_path, "/");
+        strcat(src_path, dirent_src->d_name);
+        
+        printf("%s\n%s\n\n", trg_path, src_path);
+        // Now check if the target exists in the src directory after traversing at some depth
+        if (strcmp(src_path, trg_path) == 0)
+            return SUCC;
+        
+        if (is_dir(src_path)) 
+            if (detect_cycle(src_path, trg_path) == SUCC)
+                return SUCC;
+
+        // free the allocated memory
+        free(src_path);
+        src_path = NULL;
+    }
+    
+    return FAIL;
 }
