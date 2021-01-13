@@ -14,4 +14,4 @@ typedef size_t (*Hash_Func)(Pointer entry); //Function to hash the entry to a sp
 typedef struct {
     int src_ino;
     char *trg_path;
-} *Pair;
+} *inodePair;

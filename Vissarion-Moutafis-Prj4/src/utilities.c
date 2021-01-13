@@ -87,6 +87,7 @@ int copy_file(int in_fd, int out_fd, int BUFFSIZE) {
 DIR *create_dir(char *path) {
     if (mkdir(path, 0755) < 0) {
         fprintf(stderr, "Cannot create dir '%s'.\n", path);
+        exit(1);
     }
     return opendir(path);
 }
@@ -209,7 +210,6 @@ int detect_cycle(char *src_dir, char* trg_path) {
         strcat(src_path, "/");
         strcat(src_path, dirent_src->d_name);
         
-        printf("%s\n%s\n\n", trg_path, src_path);
         // Now check if the target exists in the src directory after traversing at some depth
         if (strcmp(src_path, trg_path) == 0)
             return SUCC;

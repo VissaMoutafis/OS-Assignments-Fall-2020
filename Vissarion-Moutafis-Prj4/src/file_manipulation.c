@@ -36,18 +36,6 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     if (is_sym(in_path) && !(manage_links)) 
         return FILE_CP_SUCC;
     
-    // add the size of the file to the copied file
-    struct stat buf;
-    memset(&buf, 0, sizeof(buf));
-    if (lstat(in_path, &buf) < 0) {
-        fprintf(stderr, "%s: Cannot open input file to acquire size.\n", in_path);
-        return FILE_CP_FAIL;
-    }
-    bytes_copied += (u_int64_t)buf.st_size;
-    // and increase the copied files counter
-    items_copied += 1;
-
-
     // open input file
     if ((in = open(in_path, O_RDONLY)) == -1) {
         // the reading of the input file failed print error message
@@ -68,7 +56,22 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     }
 
     // copy the contents of input file to out put and return 
-    return copy_file(in, out, BUFFSIZE);
+    int ret = copy_file(in, out, BUFFSIZE);
+    if (ret == FILE_CP_SUCC) {
+        // add the size of the file to the copied file
+        struct stat buf;
+        memset(&buf, 0, sizeof(buf));
+        if (lstat(out_path, &buf) < 0) {
+            fprintf(stderr, "%s: Cannot open input file to acquire size.\n",
+                    out_path);
+            return FILE_CP_FAIL;
+        }
+        bytes_copied += buf.st_size;
+        // and increase the copied files counter
+        items_copied += 1;
+    }
+
+    return ret;
 }
 
 
@@ -90,6 +93,15 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
             fprintf(stderr, "Trouble creating directory '%s'.\n", out_path);
             return DIR_CP_FAIL;
         }
+        // add the size of the dir to the bytes copied counter
+        struct stat buf;
+        memset(&buf, 0, sizeof(buf));
+        if (lstat(out_path, &buf) < 0) {
+            fprintf(stderr, "%s: Cannot open input file to acquire size.\n",
+                    out_path);
+            return FILE_CP_FAIL;
+        }
+        bytes_copied += buf.st_size;
     }
 
     // At this point we must copy the mode of the in dir to the out dir
@@ -117,7 +129,7 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         strcpy(new_out_path, out_path);
         strcat(new_out_path, "/");
         strcat(new_out_path, dirent_in->d_name);
-        printf("Trying to create '%s' from '%s'.\n", new_out_path, element_path);
+
         // // copy every element of the directory
         if (copy_element(element_path, new_out_path, out_root_path) == FAIL)
             return DIR_CP_FAIL;
@@ -129,10 +141,10 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         new_out_path = NULL;
     }
 
-    if (dir_changed)
-        // increase the copied items counter
+    if (dir_changed){
+        // and increase the copied files counter
         items_copied += 1;
-
+    }
     if (check_for_deleted && check_deleted(in_path, out_path) == FAIL)
         return DIR_CP_FAIL;
 
@@ -154,7 +166,6 @@ int copy_element(char *in_path, char *out_path, char *out_root_path) {
     
     //every time we copy an element we increase the detected elements counts
     items_detected += 1;
-
 
     if (is_dir(in_path)) {
         return copy_dir(in_path, out_path, CP_BUFFSIZE, out_root_path);
@@ -247,15 +258,20 @@ void print_statistics(void) {
     sep);
 }
 
-char *src;
-char *target;
+static void set_up_trg_dir(char *target) {
+    struct stat buf;
+    int exists =  !(lstat(target, &buf) < 0 || buf.st_ino == 0);
+    
+    if (!exists) {
+        create_dir(target);
+    }
+}
 
 int main(int argc, char *argv[]) {
     // return the origin and target directory. Also set the proper flags during searching the args.
     char** args = set_args(argc, argv, 2);
-    src = realpath(args[0], NULL);
-    target = realpath(args[1], NULL);
-
+    char *src = realpath(args[0], NULL);
+    char *target = realpath(args[1], NULL);
     double t1, t2;
     struct tms tb1, tb2;
     double ticspersec;
@@ -263,12 +279,16 @@ int main(int argc, char *argv[]) {
     ticspersec = (double)sysconf(_SC_CLK_TCK);
     t1 = (double)times(&tb1);
 
-    // check for cyclic path
-    if (detect_cycle(src, target) == FAIL) {
-        // int ret = copy_element(src, target, target);
-        // if (ret == FAIL) {
-        //     fprintf(stderr, "Failed to execute copy command.\n");
-        // }
+    // check for cyclic path (if the target does not exists then there is no need for checking cycles)
+    if (!target || detect_cycle(src, target) == FAIL) {
+        if (!target){
+            set_up_trg_dir(args[1]);
+            target = realpath(args[1], NULL);
+        }
+        int ret = copy_element(src, target, target);
+        if (ret == FAIL) {
+            fprintf(stderr, "Failed to execute copy command.\n");
+        }
     } else {
         free(src);
         free(target);
