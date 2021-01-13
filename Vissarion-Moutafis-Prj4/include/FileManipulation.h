@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "HT.h"
+
 #define CP_BUFFSIZE 10
 
 #define FILE_CP_SUCC 1

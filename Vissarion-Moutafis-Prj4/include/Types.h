@@ -12,6 +12,6 @@ typedef void (*Visit)(Pointer item); //Function to help the user define the way 
 typedef size_t (*Hash_Func)(Pointer entry); //Function to hash the entry to a specific integer
 
 typedef struct {
-    int src_ino;
+    ino_t src_ino;
     char *trg_path;
 } *inodePair;

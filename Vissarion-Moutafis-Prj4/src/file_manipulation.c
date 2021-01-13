@@ -22,7 +22,14 @@ u_int32_t items_detected = 0;
 //total time the whole copy process lasted
 double total_time = 0.0;
 
+// flag that is used to check if a directory changed after recursive calls to its contents
 short dir_changed = 0;
+
+// this is the map of {key:item} pairs that 
+// "key = src file system file inode" and 
+// "item = trg file system respective path after first copy"
+// it will be used to properly detect and copy hard links
+HT inodes_map = NULL;
 
 // function that copies a file ( with name in_path) to the file with name out_path. 
 // If the latter doesn't exist create it.
@@ -36,6 +43,12 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     if (is_sym(in_path) && !(manage_links)) 
         return FILE_CP_SUCC;
     
+    // check for hard links and if they exist try to create one. 
+    // If the respective inode in trg dir's file system is not yet created, then 
+    // return FILE_CP_FAIL and proceeed to the normal copy of the file
+    if (manage_links && number_of_links(in_path) > 1 && create_link(in_path, out_path, inodes_map) == FILE_CP_SUCC)
+        return FILE_CP_SUCC;
+
     // open input file
     if ((in = open(in_path, O_RDONLY)) == -1) {
         // the reading of the input file failed print error message
@@ -79,7 +92,7 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
 int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
     DIR *in_dp, *out_dp;
     struct dirent *dirent_in;
-
+    
     // first open the directory 
     if ((in_dp = opendir(in_path)) == NULL) {
         fprintf(stderr, "Trouble opening directory '%s'.\n", in_path);
@@ -91,6 +104,7 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         out_dp = create_dir(out_path);
         if (!out_dp) {
             fprintf(stderr, "Trouble creating directory '%s'.\n", out_path);
+            closedir(in_dp);
             return DIR_CP_FAIL;
         }
         // add the size of the dir to the bytes copied counter
@@ -99,7 +113,7 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         if (lstat(out_path, &buf) < 0) {
             fprintf(stderr, "%s: Cannot open input file to acquire size.\n",
                     out_path);
-            return FILE_CP_FAIL;
+            exit(1);
         }
         bytes_copied += buf.st_size;
     }
@@ -108,7 +122,7 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
     // copy the mode to the out
     if (chmod(out_path, path_get_mode(in_path)) < 0) {
         perror("chmod");
-        return DIR_CP_FAIL;
+        exit(1);
     }
     // set the flag
     dir_changed = 0;
@@ -131,8 +145,11 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         strcat(new_out_path, dirent_in->d_name);
 
         // // copy every element of the directory
-        if (copy_element(element_path, new_out_path, out_root_path) == FAIL)
+        if (copy_element(element_path, new_out_path, out_root_path) == FAIL) {
+            closedir(in_dp);
+            closedir(out_dp);
             return DIR_CP_FAIL;
+        }
 
         // free the allocated memory
         free(element_path);
@@ -145,8 +162,14 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         // and increase the copied files counter
         items_copied += 1;
     }
-    if (check_for_deleted && check_deleted(in_path, out_path) == FAIL)
+    if (check_for_deleted && check_deleted(in_path, out_path) == FAIL) {
+        closedir(in_dp);
+        closedir(out_dp);
         return DIR_CP_FAIL;
+    }
+
+    closedir(in_dp);
+    closedir(out_dp);
 
     return DIR_CP_SUCC;
 }
@@ -276,6 +299,8 @@ int main(int argc, char *argv[]) {
     struct tms tb1, tb2;
     double ticspersec;
 
+    inodes_map = ht_create(cmp_inode_pair, hash_inode_pair, destroy_inode_pair);
+
     ticspersec = (double)sysconf(_SC_CLK_TCK);
     t1 = (double)times(&tb1);
 
@@ -290,8 +315,10 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Failed to execute copy command.\n");
         }
     } else {
+        free(args);
         free(src);
         free(target);
+        ht_destroy(inodes_map);
         fprintf(stderr, "Error: Cannot copy path '..' in '.'\n");
         exit(1);
     }
@@ -304,5 +331,6 @@ int main(int argc, char *argv[]) {
     free(args);
     free(src);
     free(target);
+    ht_destroy(inodes_map);
     return 0;
 }

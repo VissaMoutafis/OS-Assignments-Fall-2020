@@ -6,7 +6,7 @@ mode_t path_get_mode(char *path) {
     memset(&buf, 0, sizeof(buf));
     if (lstat(path, &buf) < 0) {
         perror("lstat");
-        return -1;
+        exit(1);
     }
     return buf.st_mode;
 }
@@ -17,7 +17,7 @@ int is_dir(char *path) {
     memset(&buf, 0, sizeof(buf));
     if (lstat(path, &buf) < 0) {
         perror("lstat");
-        return 0;
+        exit(1);
     }
     return (buf.st_mode & S_IFMT) == S_IFDIR;
 }
@@ -49,14 +49,85 @@ int is_sym(char *path) {
     memset(&buf, 0, sizeof(buf));
     if (lstat(path, &buf) < 0) {
         perror("lstat");
-        return 0;
+        exit(1);
     }
     return (buf.st_mode & S_IFMT) == S_IFLNK;
 }
 
-// int get_hardlinks(char *path) {
-//     // TODO
-// }
+// return 1 if the path is symbolic link, else 0
+int  number_of_links(char *path) {
+    struct stat buf;
+    memset(&buf, 0, sizeof(buf));
+    if (lstat(path, &buf) < 0) {
+        perror("lstat");
+        exit(1);
+    }
+    return buf.st_nlink;
+}
+
+Pointer create_inode_pair(ino_t ino, char *path, int deep_copy) {
+    inodePair p = calloc(1, sizeof(*p));
+    p->src_ino = ino;
+    if (deep_copy) {
+        p->trg_path = calloc(strlen(path) + 1, sizeof(char));
+        strcpy(p->trg_path, path);
+    } else 
+        p->trg_path = path;
+
+    return (Pointer) p;
+}
+
+int cmp_inode_pair(void *a, void *b) {
+    inodePair p1 = (inodePair)a;
+    inodePair p2 = (inodePair)b;
+
+    return p1->src_ino - p2->src_ino;
+}
+
+size_t hash_inode_pair(void *_p) {
+    inodePair p = (inodePair)_p;
+    // Knuth's multiplicative method. Check link below:
+    // (https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key)
+    return (((size_t)p->src_ino) * 2654435761) % (((size_t)2)<<32);
+}
+
+void destroy_inode_pair(void *a) {
+    inodePair p = (inodePair)a;
+    free(p->trg_path);
+    free(a);
+}
+
+int create_link(char *in_path, char *out_path, HT inode_table) {
+    // The inode table is a table of {src inode number (int), target path to the specific inode}
+    struct stat buf_src;
+    if (lstat(in_path, &buf_src) < 0) {
+        perror("lstat at create link");
+        exit(1);
+    }
+    
+    ino_t src_ino = buf_src.st_ino;
+    inodePair dummy = create_inode_pair(src_ino, NULL, 0);
+    Pointer pair;
+    if (ht_contains(inode_table, dummy, &pair) == true) {
+        inodePair p = (inodePair)pair;
+        // at this point there is already a record of the inode 
+        // and we have to create a new link to the respective inode in target file system
+        if (link(p->trg_path, out_path) != 0) {
+            perror("creating hard link in create_link()");
+            exit(1);
+        }
+        free(dummy);
+        return FILE_CP_SUCC;
+    }
+
+    // at this point we have to create an entry to the hastable
+    ht_insert(inode_table, create_inode_pair(src_ino, out_path, 1));
+
+    // since no link created, return failure
+    free(dummy);
+    return FILE_CP_FAIL;
+}
+
 
 // small procedure that takes as input the __opened__ fd's
 // of one input and one output file and copies the containings of
@@ -134,7 +205,9 @@ void delete_dir(char *path) {
         free(element_path);
         element_path = NULL;
     }
+
     printf("Trying to delete '%s'\n", path);
+    closedir(dp);
     rmdir(path);
 }
 
@@ -184,7 +257,7 @@ int check_deleted(char *src_dir, char *trg_dir) {
         free(out_path);
         out_path = NULL;
     }
-    
+    closedir(trg_dp);
     return SUCC;
 }
 
@@ -211,17 +284,22 @@ int detect_cycle(char *src_dir, char* trg_path) {
         strcat(src_path, dirent_src->d_name);
         
         // Now check if the target exists in the src directory after traversing at some depth
-        if (strcmp(src_path, trg_path) == 0)
+        if (strcmp(src_path, trg_path) == 0){
+            free(src_path);
+            closedir(src_dp);
             return SUCC;
+        }
         
         if (is_dir(src_path)) 
-            if (detect_cycle(src_path, trg_path) == SUCC)
+            if (detect_cycle(src_path, trg_path) == SUCC){
+                free(src_path);
+                closedir(src_dp);
                 return SUCC;
-
+            }
         // free the allocated memory
         free(src_path);
         src_path = NULL;
     }
-    
+    closedir(src_dp);
     return FAIL;
 }
