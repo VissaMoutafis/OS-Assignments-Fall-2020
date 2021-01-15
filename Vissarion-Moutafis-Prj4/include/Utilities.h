@@ -37,6 +37,11 @@ int number_of_links(char *in_path);
 // return FILE_CP_SUCC in success and FILE_CP_FAIL in failure (the inode doesn't exist)
 int create_link(char *in_path, char *out_path, HT inode_table);
 
+// create symlink from src_path to trg_path. In success return FILE_CP_SUCC,
+// else FILE_CP_FAIL
+int create_symlink(char *src_path, char *trg_path);
+
+
 // small procedure that takes as input the __opened__ fd's
 // of one input and one output file and copies the containings of
 // the first to the second. Returns 1 in success, otherwise 0

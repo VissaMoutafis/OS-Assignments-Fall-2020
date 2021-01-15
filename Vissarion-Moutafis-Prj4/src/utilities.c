@@ -33,10 +33,7 @@ int files_diff(char *in_path, char *out_path) {
     if (lstat(out_path, &out_buf) < 0) {
         return 1;
     }
-
-    if ((in_buf.st_mode & S_IFMT) == S_IFLNK)
-        return 0;
-
+    
     return (in_buf.st_mode & S_IFMT) == (out_buf.st_mode & S_IFMT) &&  // check if the files are of the same type
                    in_buf.st_size == out_buf.st_size &&  // check if the files are of the same size
                    in_buf.st_mtime <= out_buf.st_mtime 
@@ -51,7 +48,27 @@ int is_sym(char *path) {
         perror("lstat");
         exit(1);
     }
-    return (buf.st_mode & S_IFMT) == S_IFLNK;
+    return S_ISLNK(buf.st_mode);
+}
+
+int create_symlink(char *src_path, char *trg_path) {
+    // create the symlink, by using the symlink string according to the src_path symlink
+    char dest_file[BUFSIZ];
+    memset(dest_file, 0, BUFSIZ);
+    int bytes_read = readlink(src_path, dest_file, BUFSIZ);
+    if (bytes_read == -1) {
+        fprintf(stderr, "Link '%s' is dangling, we skip the creation\n", src_path);
+        return FILE_CP_SUCC;
+    }
+
+    // try to create the symlink
+    if (symlink(dest_file, trg_path) == 0){
+        items_copied += 1;
+        return FILE_CP_SUCC;
+    }
+    
+    // return failure
+    return FILE_CP_FAIL;
 }
 
 // return 1 if the path is symbolic link, else 0
@@ -98,6 +115,7 @@ void destroy_inode_pair(void *a) {
 }
 
 int create_link(char *in_path, char *out_path, HT inode_table) {
+    
     // The inode table is a table of {src inode number (int), target path to the specific inode}
     struct stat buf_src;
     if (lstat(in_path, &buf_src) < 0) {
@@ -117,6 +135,7 @@ int create_link(char *in_path, char *out_path, HT inode_table) {
             exit(1);
         }
         free(dummy);
+        items_copied += 1;
         return FILE_CP_SUCC;
     }
 

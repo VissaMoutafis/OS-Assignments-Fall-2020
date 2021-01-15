@@ -40,9 +40,12 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     // use link to make a hard link in the new media
     
     // if it is a symlink and we don't want to consider the links then just skip it
-    if (is_sym(in_path) && !(manage_links)) 
-        return FILE_CP_SUCC;
-    
+    if (is_sym(in_path)) { 
+        if (!(manage_links))
+            return FILE_CP_SUCC;
+        else 
+            return create_symlink(in_path, out_path);
+    }
     // check for hard links and if they exist try to create one. 
     // If the respective inode in trg dir's file system is not yet created, then 
     // return FILE_CP_FAIL and proceeed to the normal copy of the file
@@ -116,6 +119,8 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
             exit(1);
         }
         bytes_copied += buf.st_size;
+        items_copied += 1;
+        
     }
 
     // At this point we must copy the mode of the in dir to the out dir
@@ -158,10 +163,6 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         new_out_path = NULL;
     }
 
-    if (dir_changed){
-        // and increase the copied files counter
-        items_copied += 1;
-    }
     if (check_for_deleted && check_deleted(in_path, out_path) == FAIL) {
         closedir(in_dp);
         closedir(out_dp);
@@ -197,9 +198,8 @@ int copy_element(char *in_path, char *out_path, char *out_root_path) {
         // reason to copy again
         if (files_diff(in_path, out_path) == 0)
             return FILE_CP_SUCC;
-
-        dir_changed = 1;
-        return clean_copy_file(in_path, out_path, CP_BUFFSIZE, out_path);
+        // printf("copy %s\n", in_path);
+        return clean_copy_file(in_path, out_path, CP_BUFFSIZE, out_root_path);
     }
 
     return FAIL;
@@ -286,6 +286,7 @@ static void set_up_trg_dir(char *target) {
     int exists =  !(lstat(target, &buf) < 0 || buf.st_ino == 0);
     
     if (!exists) {
+        items_copied += 1;
         create_dir(target);
     }
 }

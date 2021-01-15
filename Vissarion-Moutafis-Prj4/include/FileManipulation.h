@@ -12,6 +12,21 @@
 
 #include "HT.h"
 
+// Declaration of various needed variables among uilities and file manip files.
+
+// total bytes copied
+u_int64_t bytes_copied;
+// total number of new elements copied
+u_int32_t items_copied;
+// total number of elements checked for copying
+u_int32_t items_detected;
+// total time the whole copy process lasted
+double total_time;
+// flag that is used to check if a directory changed after recursive calls to
+// its contents
+short dir_changed;
+
+
 #define CP_BUFFSIZE 10
 
 #define FILE_CP_SUCC 1
