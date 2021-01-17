@@ -34,9 +34,16 @@ int files_diff(char *in_path, char *out_path) {
         return 1;
     }
     
+    if (manage_links)
+        return (in_buf.st_mode & S_IFMT) == (out_buf.st_mode & S_IFMT) &&  // check if the files are of the same type
+                   in_buf.st_size == out_buf.st_size &&  // check if the files are of the same size
+                   in_buf.st_mtime <= out_buf.st_mtime &&
+                   in_buf.st_nlink == out_buf.st_nlink
+                   ? 0 : 1;  // check if the src is modified later than it's relative copy
+    
     return (in_buf.st_mode & S_IFMT) == (out_buf.st_mode & S_IFMT) &&  // check if the files are of the same type
                    in_buf.st_size == out_buf.st_size &&  // check if the files are of the same size
-                   in_buf.st_mtime <= out_buf.st_mtime 
+                   in_buf.st_mtime <= out_buf.st_mtime
                    ? 0 : 1;  // check if the src is modified later than it's relative copy
 }
 
@@ -51,22 +58,32 @@ int is_sym(char *path) {
     return S_ISLNK(buf.st_mode);
 }
 
-int create_symlink(char *src_path, char *trg_path) {
+int create_symlink(char *src_path, char *trg_path, char *trg_root_path) {
     // create the symlink, by using the symlink string according to the src_path symlink
+
+    // in case the symlink name is already taken then overwrite it
+    unlink(trg_path);
+    
     char dest_file[BUFSIZ];
     memset(dest_file, 0, BUFSIZ);
     int bytes_read = readlink(src_path, dest_file, BUFSIZ);
     if (bytes_read == -1) {
-        fprintf(stderr, "Link '%s' is dangling, we skip the creation\n", src_path);
+        if (verbose)
+            fprintf(stderr, "Link '%s' is dangling, we skip the creation\n", src_path);
         return FILE_CP_SUCC;
     }
 
     // try to create the symlink
     if (symlink(dest_file, trg_path) == 0){
         items_copied += 1;
+        struct stat buf;
+        lstat(trg_path, &buf);
+        bytes_copied += buf.st_size;
+        if (verbose)
+            print_copy_element(trg_path, trg_root_path);
+
         return FILE_CP_SUCC;
     }
-    
     // return failure
     return FILE_CP_FAIL;
 }
@@ -114,11 +131,11 @@ void destroy_inode_pair(void *a) {
     free(a);
 }
 
-int create_link(char *in_path, char *out_path, HT inode_table) {
+int create_link(char *src_path, char *trg_path, char *trg_root_path, HT inode_table) {
     
     // The inode table is a table of {src inode number (int), target path to the specific inode}
     struct stat buf_src;
-    if (lstat(in_path, &buf_src) < 0) {
+    if (lstat(src_path, &buf_src) < 0) {
         perror("lstat at create link");
         exit(1);
     }
@@ -130,17 +147,25 @@ int create_link(char *in_path, char *out_path, HT inode_table) {
         inodePair p = (inodePair)pair;
         // at this point there is already a record of the inode 
         // and we have to create a new link to the respective inode in target file system
-        if (link(p->trg_path, out_path) != 0) {
-            perror("creating hard link in create_link()");
-            exit(1);
+        if (link(p->trg_path, trg_path) != 0) {
+            unlink(trg_path);
+            if (link(p->trg_path, trg_path) != 0) {
+                perror("creating hard link in create_link()");
+                exit(1);
+            }
         }
         free(dummy);
         items_copied += 1;
+        struct stat buf;
+        lstat(trg_path, &buf);
+        bytes_copied += buf.st_size;
+        if (verbose)
+            print_copy_element(trg_path, trg_root_path);
         return FILE_CP_SUCC;
     }
 
     // at this point we have to create an entry to the hastable
-    ht_insert(inode_table, create_inode_pair(src_ino, out_path, 1));
+    ht_insert(inode_table, create_inode_pair(src_ino, trg_path, 1));
 
     // since no link created, return failure
     free(dummy);
@@ -182,17 +207,18 @@ DIR *create_dir(char *path) {
     return opendir(path);
 }
 
-void delete_element(char *path) {
-    printf("Trying to delete '%s'\n", path);
+void delete_element(char *path, char *trg_root_path) {
     if(unlink(path) != 0) {
         char b[BUFSIZ];
         sprintf(b, "Unlinking '%s'", path);
         perror(b);
         exit(1);
     }
+    if (verbose)
+        print_remove_element(path, trg_root_path);
 }
 
-void delete_dir(char *path) {
+void delete_dir(char *path, char *trg_root_path) {
     DIR *dp;
     struct dirent *dir;
 
@@ -216,22 +242,23 @@ void delete_dir(char *path) {
         strcat(element_path, dir->d_name);
 
         if (is_dir(element_path))
-            delete_dir(element_path);
+            delete_dir(element_path, trg_root_path);
         else
-            delete_element(element_path);
+            delete_element(element_path, trg_root_path);
 
         // free the allocated memory
         free(element_path);
         element_path = NULL;
     }
 
-    printf("Trying to delete '%s'\n", path);
     closedir(dp);
     rmdir(path);
+
+    if (verbose)
+        print_remove_element(path, trg_root_path);
 }
 
-
-int check_deleted(char *src_dir, char *trg_dir) {
+int check_deleted(char *src_dir, char *trg_dir, char *trg_root_path) {
     DIR *trg_dp;
     struct dirent *dirent_trg;
 
@@ -265,9 +292,9 @@ int check_deleted(char *src_dir, char *trg_dir) {
 
         if (exists_in_trg && !exists_in_src) {
             if (is_dir(out_path)) 
-                delete_dir(out_path);
+                delete_dir(out_path, trg_root_path);
             else 
-                delete_element(out_path);
+                delete_element(out_path, trg_root_path);
         }
 
         // free the allocated memory
@@ -321,4 +348,14 @@ int detect_cycle(char *src_dir, char* trg_path) {
     }
     closedir(src_dp);
     return FAIL;
+}
+
+void print_copy_element(char *path, char *trg_root_path) {
+    int start = strlen(trg_root_path);
+    printf("%s\n", path+start+1);
+}
+
+void print_remove_element(char *path, char *trg_root_path) {
+    int start = strlen(trg_root_path);
+    printf("removing '%s'...\n", path + start + 1);
 }

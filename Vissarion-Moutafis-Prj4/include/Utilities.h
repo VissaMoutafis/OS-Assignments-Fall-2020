@@ -27,7 +27,7 @@ int files_diff(char *in_path, char *out_path);
 int is_sym(char *path);
 
 // function that decreases the link count of the specific element's inode
-void delete_element(char *path);
+void delete_element(char *path, char *trg_root_path);
 
 // return the number of hardlinks to the file
 int number_of_links(char *in_path);
@@ -35,11 +35,11 @@ int number_of_links(char *in_path);
 // try to create a link of a file that already exists. 
 // Use the map of the output for the Target Media File System to determine if the inode exists.
 // return FILE_CP_SUCC in success and FILE_CP_FAIL in failure (the inode doesn't exist)
-int create_link(char *in_path, char *out_path, HT inode_table);
+int create_link(char *src_path, char *trg_path, char *trg_root_path, HT inode_table);
 
 // create symlink from src_path to trg_path. In success return FILE_CP_SUCC,
 // else FILE_CP_FAIL
-int create_symlink(char *src_path, char *trg_path);
+int create_symlink(char *src_path, char *trg_path, char *trg_root_path);
 
 
 // small procedure that takes as input the __opened__ fd's
@@ -48,12 +48,16 @@ int create_symlink(char *src_path, char *trg_path);
 int copy_file(int in_fd, int out_fd, int BUFFSIZE);
 
 // check for the files in target that are deleted from source and delete them from target
-int check_deleted(char *src_path, char *trg_path);
+int check_deleted(char *src_path, char *trg_path, char *root_path);
 
 // check if the target path is inside the src path and we have an infinite loop
 // return SUCC if it detects a cycle, otherwise return FAIL 
 int detect_cycle(char *src_path, char *trg_path);
 
+// description of what copying
+void print_copy_element(char *path, char *trg_root_path);
+// description of what is being removed
+void print_remove_element(char *path, char *trg_root_path);
 
 // functions to manipulate inodePair type
 int cmp_inode_pair(void *a, void *b);

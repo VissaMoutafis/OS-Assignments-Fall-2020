@@ -40,16 +40,13 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
     // use link to make a hard link in the new media
     
     // if it is a symlink and we don't want to consider the links then just skip it
-    if (is_sym(in_path)) { 
-        if (!(manage_links))
-            return FILE_CP_SUCC;
-        else 
-            return create_symlink(in_path, out_path);
-    }
+    if (manage_links && is_sym(in_path))
+        return create_symlink(in_path, out_path, out_root_path);
+        
     // check for hard links and if they exist try to create one. 
     // If the respective inode in trg dir's file system is not yet created, then 
     // return FILE_CP_FAIL and proceeed to the normal copy of the file
-    if (manage_links && number_of_links(in_path) > 1 && create_link(in_path, out_path, inodes_map) == FILE_CP_SUCC)
+    if (manage_links && number_of_links(in_path) > 1 && create_link(in_path, out_path, out_root_path, inodes_map) == FILE_CP_SUCC)
         return FILE_CP_SUCC;
 
     // open input file
@@ -86,6 +83,8 @@ int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_
         // and increase the copied files counter
         items_copied += 1;
     }
+    if (verbose)
+        print_copy_element(out_path, out_root_path);
 
     return ret;
 }
@@ -120,7 +119,8 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         }
         bytes_copied += buf.st_size;
         items_copied += 1;
-        
+        if (verbose)
+            print_copy_element(out_path, out_root_path);
     }
 
     // At this point we must copy the mode of the in dir to the out dir
@@ -163,7 +163,7 @@ int copy_dir(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path) {
         new_out_path = NULL;
     }
 
-    if (check_for_deleted && check_deleted(in_path, out_path) == FAIL) {
+    if (check_for_deleted && check_deleted(in_path, out_path, out_root_path) == FAIL) {
         closedir(in_dp);
         closedir(out_dp);
         return DIR_CP_FAIL;
@@ -267,18 +267,9 @@ char **set_args(int argc, char *argv[],  int min_args) {
 }
 
 void print_statistics(void) {
-    char *sep = "=========================================";
-    printf("\n\n%s\n\tStatistics:\n\n"
-    "   Total Time Elapsed: %.4f\n"
-    "   Total Elements Copied: %u/%u (copied/detected)\n"
-    "   Total Bytes Copied: %lu\n"
-    "   Write Rate: %.4f\n%s\n", 
-    sep, 
-    total_time, 
-    items_copied, items_detected, 
-    bytes_copied, 
-    bytes_copied ? ((double)bytes_copied)/total_time : 0,
-    sep);
+    printf("\nThere are %d files/directories in the hierarchy.\n", items_detected);
+    printf("Number of entities copied is %d.\n", items_copied);
+    printf("Copied %ld bytes in %.3f seconds at %.2f bytes/sec.\n", bytes_copied, total_time, bytes_copied ? ((double)bytes_copied)/total_time : 0);
 }
 
 static void set_up_trg_dir(char *target) {
@@ -287,7 +278,14 @@ static void set_up_trg_dir(char *target) {
     
     if (!exists) {
         items_copied += 1;
+        struct stat buf;
+        lstat(target, &buf);
+        bytes_copied += buf.st_size;
         create_dir(target);
+        if (verbose) {
+            printf("Target directory does not exist.\nCreated directory %s.\n", target);
+            printf("./\n");
+        }
     }
 }
 
@@ -316,18 +314,19 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Failed to execute copy command.\n");
         }
     } else {
+        fprintf(stderr, "Error: Cannot copy path '%s' in '%s'\n", src, target);
         free(args);
         free(src);
         free(target);
         ht_destroy(inodes_map);
-        fprintf(stderr, "Error: Cannot copy path '..' in '.'\n");
         exit(1);
     }
 
     t2 = times(&tb2);
-    total_time = 1000.0*(float)(t2-t1)/(float)ticspersec;
+    total_time = (float)(t2-t1)/(float)ticspersec;
     // print statistics
-    print_statistics();
+    if (verbose)
+        print_statistics();
 
     free(args);
     free(src);

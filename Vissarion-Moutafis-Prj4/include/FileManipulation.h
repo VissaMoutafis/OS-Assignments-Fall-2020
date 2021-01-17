@@ -40,8 +40,13 @@ short dir_changed;
 
 #define ACCESS_RIGHTS_MASK 0x1ff
 
-// set to 0 if you don't want to consider symlinks, else set it to 1
+// flag that determines if we should handle links or not (1 or 0 respectively)
 int manage_links;
+// flag that determines whether to check for deleted files in the src dir that
+// don't exist in out dir.
+int check_for_deleted;
+// flag that defines the verbosity level of the output
+int verbose;
 
 // function that copies a file, given in in_path, using a batch of BUFFSIZE and 
 // creates the new file with permissions PERMS and if the file exists then it truncates it
