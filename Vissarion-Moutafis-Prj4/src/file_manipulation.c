@@ -14,13 +14,13 @@ int check_for_deleted = 0;
 int verbose = 0;
 
 // total bytes copied
-u_int64_t bytes_copied = 0;
+unsigned int bytes_copied = 0;
 // total number of new elements copied
-u_int32_t items_copied = 0;
+unsigned int items_copied = 0;
 // total number of elements checked for copying
-u_int32_t items_detected = 0;
+unsigned int items_detected = 0;
 //total time the whole copy process lasted
-double total_time = 0.0;
+float total_time = 0.0;
 
 // flag that is used to check if a directory changed after recursive calls to its contents
 short dir_changed = 0;
@@ -267,21 +267,22 @@ char **set_args(int argc, char *argv[],  int min_args) {
 }
 
 void print_statistics(void) {
-    printf("\nThere are %d files/directories in the hierarchy.\n", items_detected);
-    printf("Number of entities copied is %d.\n", items_copied);
-    printf("Copied %ld bytes in %.3f seconds at %.2f bytes/sec.\n", bytes_copied, total_time, bytes_copied ? ((double)bytes_copied)/total_time : 0);
+    printf("\nThere are %u files/directories in the hierarchy.\n", items_detected);
+    printf("Number of entities copied is %u.\n", items_copied);
+    printf("Copied %u bytes in %.3f seconds at %.2f bytes/sec.\n", bytes_copied, total_time, bytes_copied ? ((float)bytes_copied)/total_time:0.0 );
+
 }
 
-static void set_up_trg_dir(char *target) {
+void set_up_trg_dir(char *target) {
     struct stat buf;
     int exists =  !(lstat(target, &buf) < 0 || buf.st_ino == 0);
     
     if (!exists) {
+        DIR *new_dir = create_dir(target);
         items_copied += 1;
-        struct stat buf;
         lstat(target, &buf);
         bytes_copied += buf.st_size;
-        create_dir(target);
+        closedir(new_dir);
         if (verbose) {
             printf("Target directory does not exist.\nCreated directory %s.\n", target);
             printf("./\n");
@@ -290,10 +291,21 @@ static void set_up_trg_dir(char *target) {
 }
 
 int main(int argc, char *argv[]) {
+    
+    manage_links = 0;
+    check_for_deleted = 0;
+    verbose = 0;
+    bytes_copied = 0;
+    items_copied = 0;
+    items_detected = 0;
+    total_time = 0.0;
+    dir_changed = 0;
+
     // return the origin and target directory. Also set the proper flags during searching the args.
     char** args = set_args(argc, argv, 2);
     char *src = realpath(args[0], NULL);
     char *target = realpath(args[1], NULL);
+
     double t1, t2;
     struct tms tb1, tb2;
     double ticspersec;
@@ -304,7 +316,7 @@ int main(int argc, char *argv[]) {
     t1 = (double)times(&tb1);
 
     // check for cyclic path (if the target does not exists then there is no need for checking cycles)
-    if (!target || detect_cycle(src, target) == FAIL) {
+    if (src && (!target || detect_cycle(src, target) == FAIL)) {
         if (!target){
             set_up_trg_dir(args[1]);
             target = realpath(args[1], NULL);
@@ -314,10 +326,13 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Failed to execute copy command.\n");
         }
     } else {
-        fprintf(stderr, "Error: Cannot copy path '%s' in '%s'\n", src, target);
-        free(args);
-        free(src);
-        free(target);
+        fprintf(stderr, "Error: Cannot copy path '%s' in '%s'\n", args[0], args[1]);
+        if (args)
+            free(args);
+        if (src)
+            free(src);
+        if (target)
+            free(target);
         ht_destroy(inodes_map);
         exit(1);
     }

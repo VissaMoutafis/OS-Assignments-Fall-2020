@@ -13,17 +13,23 @@
 #include "HT.h"
 
 // Declaration of various needed variables among uilities and file manip files.
+// flag that determines if we should handle links or not (1 or 0 respectively)
+int manage_links;
+// flag that determines whether to check for deleted files in the src dir that don't exist in out dir.
+int check_for_deleted;
+// flag that defines the verbosity level of the output
+int verbose;
 
 // total bytes copied
-u_int64_t bytes_copied;
+unsigned int bytes_copied;
 // total number of new elements copied
-u_int32_t items_copied;
+unsigned int items_copied;
 // total number of elements checked for copying
-u_int32_t items_detected;
-// total time the whole copy process lasted
-double total_time;
-// flag that is used to check if a directory changed after recursive calls to
-// its contents
+unsigned int items_detected;
+//total time the whole copy process lasted
+float total_time;
+
+// flag that is used to check if a directory changed after recursive calls to its contents
 short dir_changed;
 
 
@@ -39,15 +45,6 @@ short dir_changed;
 #define FAIL 0
 
 #define ACCESS_RIGHTS_MASK 0x1ff
-
-// flag that determines if we should handle links or not (1 or 0 respectively)
-int manage_links;
-// flag that determines whether to check for deleted files in the src dir that
-// don't exist in out dir.
-int check_for_deleted;
-// flag that defines the verbosity level of the output
-int verbose;
-
 // function that copies a file, given in in_path, using a batch of BUFFSIZE and 
 // creates the new file with permissions PERMS and if the file exists then it truncates it
 // returns 1 in success and 0 in failure
