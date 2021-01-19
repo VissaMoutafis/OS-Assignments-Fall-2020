@@ -24,6 +24,8 @@ int verbose;
 unsigned int bytes_copied;
 // total number of new elements copied
 unsigned int items_copied;
+//total number of deleted items
+unsigned int items_deleted;
 // total number of elements checked for copying
 unsigned int items_detected;
 //total time the whole copy process lasted
@@ -51,7 +53,7 @@ short dir_changed;
 int clean_copy_file(char *in_path, char *out_path, int BUFFSIZE, char *out_root_path);
 
 // function that can copy all kinds of notions in the in path (dirs are copied recursively)
-int copy_element(char *in_path, char *out_path, char *out_root_path);
+int copy_element(char *src_path, char *trg_path, char *trg_root_path);
 
 
 

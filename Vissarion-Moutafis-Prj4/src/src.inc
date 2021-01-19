@@ -1,3 +1,3 @@
-OBJS += $(SRC)/file_manipulation.o
-OBJS += $(SRC)/HT_Implementation.o
-OBJS += $(SRC)/utilities.o
+OBJS += $(BIN)/file_manipulation.o
+OBJS += $(BIN)/HT_Implementation.o
+OBJS += $(BIN)/utilities.o

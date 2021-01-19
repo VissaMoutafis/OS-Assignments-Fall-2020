@@ -22,7 +22,7 @@ testcase-num := 1K
 
 src_element = ./test_dir
 dest = ./target_media/phony
-ARGS = $(src_element) $(dest)
+ARGS = $(src_element) $(dest) -v
 
 include $(SRC)/src.inc
 
@@ -38,9 +38,6 @@ clean:
 
 clean-dest: 
 	rm -rf ./target_media/*
-
-run-noargs : $(BUILD)/$(PROGRAM)
-	$(BUILD)/$(PROGRAM)
 
 run : $(BUILD)/$(PROGRAM)
 	$(BUILD)/$(PROGRAM) $(ARGS) 

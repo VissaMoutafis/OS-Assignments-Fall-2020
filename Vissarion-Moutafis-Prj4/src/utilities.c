@@ -207,7 +207,7 @@ DIR *create_dir(char *path) {
     return opendir(path);
 }
 
-void delete_element(char *path, char *trg_root_path) {
+void delete_file(char *path, char *trg_root_path) {
     if(unlink(path) != 0) {
         char b[BUFSIZ];
         sprintf(b, "Unlinking '%s'", path);
@@ -258,6 +258,14 @@ void delete_dir(char *path, char *trg_root_path) {
         print_remove_element(path, trg_root_path);
 }
 
+void delete_element(char *path, char *trg_root_path) {
+    items_deleted += 1;
+    if (is_dir(path))
+        delete_dir(path, trg_root_path);
+    else
+        delete_file(path, trg_root_path);
+}
+
 int check_deleted(char *src_dir, char *trg_dir, char *trg_root_path) {
     DIR *trg_dp;
     struct dirent *dirent_trg;
@@ -291,10 +299,7 @@ int check_deleted(char *src_dir, char *trg_dir, char *trg_root_path) {
         int exists_in_trg = !(lstat(out_path, &buf) < 0 || buf.st_ino == 0);
 
         if (exists_in_trg && !exists_in_src) {
-            if (is_dir(out_path)) 
-                delete_dir(out_path, trg_root_path);
-            else 
-                delete_element(out_path, trg_root_path);
+            delete_element(out_path, trg_root_path);
         }
 
         // free the allocated memory
@@ -358,4 +363,20 @@ void print_copy_element(char *path, char *trg_root_path) {
 void print_remove_element(char *path, char *trg_root_path) {
     int start = strlen(trg_root_path);
     printf("removing '%s'...\n", path + start + 1);
+}
+
+// return 1 if element exists, 0 otherwise
+int element_exists(char *path) {
+    struct stat buf;
+    if (lstat(path, &buf) == -1)
+        return 0;
+    
+    return 1;
+}
+
+int is_same_type(char *path1, char *path2) {
+    struct stat buf1, buf2;
+    if (lstat(path1, &buf1) == -1) return 0;
+    if (lstat(path2, &buf2) == -1) return 0;
+    return (buf1.st_mode & S_IFMT) == (buf2.st_mode & S_IFMT);
 }

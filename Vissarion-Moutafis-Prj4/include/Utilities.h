@@ -26,7 +26,7 @@ int files_diff(char *in_path, char *out_path);
 // return 1 if the path is symbolic link, else 0
 int is_sym(char *path);
 
-// function that decreases the link count of the specific element's inode
+// function that deletes an element (dir/file/symlink)
 void delete_element(char *path, char *trg_root_path);
 
 // return the number of hardlinks to the file
@@ -41,6 +41,11 @@ int create_link(char *src_path, char *trg_path, char *trg_root_path, HT inode_ta
 // else FILE_CP_FAIL
 int create_symlink(char *src_path, char *trg_path, char *trg_root_path);
 
+// return 1 if element exists, 0 otherwise 
+int element_exists(char *path);
+
+// return 1 if elements are the same type, 0 otherwise
+int is_same_type(char *path1, char *path2);
 
 // small procedure that takes as input the __opened__ fd's
 // of one input and one output file and copies the containings of
