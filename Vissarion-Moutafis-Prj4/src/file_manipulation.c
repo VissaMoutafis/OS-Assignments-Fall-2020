@@ -289,6 +289,10 @@ void set_up_trg_dir(char *target) {
     
     if (!exists) {
         DIR *new_dir = create_dir(target);
+        if (!new_dir) {
+            fprintf(stderr, "Cannot create directory '%s'. Copy Failed.\n", target);
+            exit(1);
+        }
         items_copied += 1;
         lstat(target, &buf);
         bytes_copied += buf.st_size;
@@ -316,6 +320,10 @@ int main(int argc, char *argv[]) {
     char** args = set_args(argc, argv, 2);
     char *src = realpath(args[0], NULL);
     char *target = realpath(args[1], NULL);
+    if (!src) {
+        print_usage();
+        exit(1);
+    }
 
     double t1, t2;
     struct tms tb1, tb2;
@@ -350,9 +358,9 @@ int main(int argc, char *argv[]) {
 
     t2 = times(&tb2);
     total_time = (float)(t2-t1)/(float)ticspersec;
+    
     // print statistics
-    if (verbose)
-        print_statistics();
+    print_statistics();
 
     free(args);
     free(src);

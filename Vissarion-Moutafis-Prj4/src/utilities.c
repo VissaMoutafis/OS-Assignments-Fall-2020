@@ -241,10 +241,7 @@ void delete_dir(char *path, char *trg_root_path) {
         strcat(element_path, "/");
         strcat(element_path, dir->d_name);
 
-        if (is_dir(element_path))
-            delete_dir(element_path, trg_root_path);
-        else
-            delete_element(element_path, trg_root_path);
+        delete_element(element_path, trg_root_path);
 
         // free the allocated memory
         free(element_path);
